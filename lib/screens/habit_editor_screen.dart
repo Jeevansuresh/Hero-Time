@@ -47,7 +47,7 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
   void _save() {
     final name = _name.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Give the habit a name')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Give the mission a name')));
       return;
     }
     _h.name = name;
@@ -84,8 +84,8 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
     final unlockAll = s.settings.unlockAll;
     final color = Color(_h.color);
 
-    return Scaffold(
-      appBar: flatAppBar(_isNew ? 'New habit' : 'Edit habit', actions: [
+    return AppScaffold(
+      appBar: flatAppBar(_isNew ? 'New mission' : 'Edit mission', actions: [
         TextButton(
           onPressed: _save,
           child: Text('Save', style: ui(15, weight: FontWeight.w700, color: color)),
@@ -113,7 +113,7 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
                   autofocus: _isNew,
                   textCapitalization: TextCapitalization.sentences,
                   style: ui(16.5, weight: FontWeight.w600),
-                  decoration: fieldDeco(hint: 'Habit name'),
+                  decoration: fieldDeco(hint: 'Mission name'),
                 ),
               ),
             ],
@@ -261,7 +261,7 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
               child: TextButton.icon(
                 onPressed: _delete,
                 icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
-                label: Text('Delete habit', style: ui(14.5, color: AppColors.danger)),
+                label: Text('Delete mission', style: ui(14.5, color: AppColors.danger)),
               ),
             ),
           ],

@@ -31,7 +31,7 @@ Future<void> main() async {
       messengerKey.currentState
         ?..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(
-          content: Text(fresh.isEmpty ? "Level up! You're Lv $to" : 'New alien unlocked: ${fresh.last.name}'),
+          content: Text(fresh.isEmpty ? "Omnitrix upgraded! You're Lv $to" : 'New DNA unlocked: ${fresh.last.name}'),
           action: fresh.isEmpty
               ? null
               : SnackBarAction(
@@ -42,20 +42,20 @@ Future<void> main() async {
     });
   };
 
-  runApp(StoreScope(store: store, child: const EmberApp()));
+  runApp(StoreScope(store: store, child: const HeroTimeApp()));
 
   Reminders.reschedule(store);
   if (store.settings.reminderOn) Reminders.requestPermission();
 }
 
-class EmberApp extends StatefulWidget {
-  const EmberApp({super.key});
+class HeroTimeApp extends StatefulWidget {
+  const HeroTimeApp({super.key});
 
   @override
-  State<EmberApp> createState() => _EmberAppState();
+  State<HeroTimeApp> createState() => _HeroTimeAppState();
 }
 
-class _EmberAppState extends State<EmberApp> with WidgetsBindingObserver {
+class _HeroTimeAppState extends State<HeroTimeApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -77,7 +77,7 @@ class _EmberAppState extends State<EmberApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Ember',
+      title: 'Hero Time',
       debugShowCheckedModeBanner: false,
       scaffoldMessengerKey: messengerKey,
       navigatorKey: navigatorKey,

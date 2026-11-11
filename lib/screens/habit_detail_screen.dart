@@ -37,7 +37,7 @@ class HabitDetailScreen extends StatelessWidget {
     final maxCount = tagRows.isEmpty ? 1 : tagRows.first.value;
     final untouched = h.tags.where((t) => !counts.containsKey(t)).toList();
 
-    return Scaffold(
+    return AppScaffold(
       appBar: flatAppBar(
         h.name,
         titleWidget: Row(

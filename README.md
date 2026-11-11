@@ -1,8 +1,11 @@
-# Ember — habit tracker
+# Hero Time — Ben 10 habit tracker
 
-Minimal, dark, local-first habit tracker for Android (Flutter). GitHub-style contribution
-grids, weekly goals, notes per day, a daily reminder at a time you choose, and a companion
-that evolves as you stay consistent.
+A personal, Ben 10 themed, local-first habit tracker for Android (Flutter). Every habit is a
+mission; logging charges the Omnitrix, and levelling up unlocks alien DNA you can transform into.
+GitHub-style grids, weekly goals, notes per day and a daily "hero time" reminder.
+
+> Fan project for personal use. Ben 10 characters and the Omnitrix design belong to their owners,
+> so don't publish this build to an app store.
 
 ## Run it
 
@@ -13,6 +16,7 @@ cd ember
 flutter create --platforms=android --org com.jeevan --project-name ember .
 dart run tool/setup_android.dart      # enables desugaring + notification permissions
 flutter pub get
+dart run flutter_launcher_icons       # Omnitrix launcher icon from assets/icon/
 flutter run                           # or: flutter build apk --release
 ```
 
@@ -37,11 +41,14 @@ The setup script patches `android/app/build.gradle(.kts)` and `AndroidManifest.x
 - Score (0–100): adherence to your weekly goal over the last 4 weeks, averaged into an overall score.
 - Gym-style habits show a 30-day tag breakdown (which muscles you hit, and which you haven't).
 
-**Aliens**
+**Aliens (DNA)**
 - XP: +10 per successful day, +3 if you add a note/tags, +40 per habit per week the goal is met.
-- Nine original aliens unlock as you level: Pip, Moji (Lv2), Bramble (4), Nimbo (6), Clink (8),
-  Luma (10), Gnash (13), Orbis (16), Sol (20). Tap one on the companion screen to transform.
-- Levels also unlock extra habit slots (5 to start; +1 at Lv 2, 4, 7, 10, 15) and new colours.
+- Eleven DNA samples unlock as you level: Heatblast, Diamondhead (Lv 2), XLR8 (4), Four Arms (6),
+  Cannonbolt (8), Swampfire (10), Jetray (12), Big Chill (14), Humungousaur (16), Way Big (18),
+  Alien X (20). Tap one on the Omnitrix screen to transform (plays the transformation theme).
+- Alien art lives in `assets/aliens/<id>.png` (transparent, square). If a file is missing, a coloured
+  DNA hologram stands in.
+- Levels also unlock extra mission slots (5 to start; +1 at Lv 2, 4, 7, 10, 15) and new colours.
 - Sound effects for logging, goals, level-ups, unlocks and transforms (toggle in Settings).
 - Settings → "Unlock everything" removes the gates if you just want the tracker.
 
@@ -62,11 +69,11 @@ lib/
   store.dart                 state + persistence + backup
   stats.dart                 streaks, weekly goals, score, XP/levels, unlocks
   notifications.dart         daily reminder planning
-  theme.dart                 colours, type, shared widgets
+  theme.dart                 Omnitrix palette, type, glass panels, backdrop
   widgets/heatmap.dart       contribution grid
-  widgets/character.dart     the companion (drawn in code, animated)
+  widgets/character.dart     alien roster + animated alien view
   widgets/habit_card.dart    home habit card
-  screens/                   home, habit detail, editor, log sheet, companion, settings
+  screens/                   home, habit detail, editor, log sheet, Omnitrix, settings
 tool/setup_android.dart      one-time Android patch
 test/widget_test.dart        logic tests (flutter test)
 ```

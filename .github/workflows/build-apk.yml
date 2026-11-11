@@ -31,6 +31,7 @@ jobs:
           flutter create --platforms=android --org com.jeevan --project-name ember . 2>&1 | tee -a create.log
           dart run tool/setup_android.dart 2>&1 | tee -a create.log
           flutter pub get 2>&1 | tee -a create.log
+          dart run flutter_launcher_icons 2>&1 | tee -a create.log
 
       - name: Analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee analyze.log
@@ -45,7 +46,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: Ember build ${{ github.run_number }}
+          name: Hero Time build ${{ github.run_number }}
           body: Install app-release.apk on your Android phone (allow installs from this source when asked).
           files: build/app/outputs/flutter-apk/app-release.apk
 

@@ -12,7 +12,7 @@ Future<void> showLogSheet(BuildContext context, Habit habit, int day) {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    backgroundColor: AppColors.card,
+    backgroundColor: AppColors.cardHi,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
     builder: (_) => LogSheet(habit: habit, day: day, existing: existing),

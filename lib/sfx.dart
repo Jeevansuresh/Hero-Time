@@ -7,6 +7,9 @@ class Sfx {
   static final List<AudioPlayer> _pool = [];
   static int _next = 0;
 
+  /// Recorded clips that replace a synthesised effect.
+  static const _clips = {'transform': 'sfx/transform_theme.mp3'};
+
   static Future<void> play(String name) async {
     if (!enabled) return;
     try {
@@ -17,7 +20,11 @@ class Sfx {
       }
       final p = _pool[_next++ % _pool.length];
       await p.stop();
-      await p.play(AssetSource('sfx/$name.wav'), mode: PlayerMode.lowLatency);
+      final clip = _clips[name];
+      await p.play(
+        AssetSource(clip ?? 'sfx/$name.wav'),
+        mode: clip != null ? PlayerMode.mediaPlayer : PlayerMode.lowLatency,
+      );
     } catch (e) {
       debugPrint('Sfx.play($name) failed: $e');
     }

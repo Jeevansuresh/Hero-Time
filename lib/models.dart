@@ -140,8 +140,8 @@ class Settings {
   int minute = 30;
   bool skipIfLogged = true;
   bool unlockAll = false;
-  String petName = 'Ember';
-  String alien = 'pip';
+  String petName = 'Ben';
+  String alien = 'heatblast';
   bool sound = true;
 
   Map<String, dynamic> toJson() => {
@@ -161,8 +161,8 @@ class Settings {
     ..minute = (j['minute'] as num?)?.toInt() ?? 30
     ..skipIfLogged = (j['skipIfLogged'] ?? true) as bool
     ..unlockAll = (j['unlockAll'] ?? false) as bool
-    ..petName = (j['petName'] ?? 'Ember') as String
-    ..alien = (j['alien'] ?? 'pip') as String
+    ..petName = ((j['petName'] ?? 'Ben') as String) == 'Ember' ? 'Ben' : (j['petName'] ?? 'Ben') as String
+    ..alien = (j['alien'] ?? 'heatblast') as String
     ..sound = (j['sound'] ?? true) as bool;
 }
 

@@ -23,11 +23,11 @@ class HomeScreen extends StatelessWidget {
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.cardHi,
           surfaceTintColor: Colors.transparent,
-          title: Text('All $slots slots in use', style: heading(19)),
+          title: Text('All $slots mission slots in use', style: heading(19)),
           content: Text(
             next == null
                 ? 'You have every slot. Delete a habit to make room.'
-                : 'Your companion unlocks another habit slot at Lv $next. Keep logging, or turn on "Unlock everything" in Settings.',
+                : 'The Omnitrix unlocks another mission slot at Lv $next. Keep logging, or turn on "Unlock everything" in Settings.',
             style: ui(14, color: AppColors.muted, height: 1.4),
           ),
           actions: [
@@ -66,64 +66,121 @@ class HomeScreen extends StatelessWidget {
     }
     final pct = days == 0 ? null : (sum / days * 100).round();
 
-    return Scaffold(
+    return AppScaffold(
       body: SafeArea(
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 48),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 56),
           children: [
+            // Brand bar
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const OmnitrixLogo(size: 38),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(fmtLong(today).toUpperCase(),
-                          style: ui(11, weight: FontWeight.w700, color: AppColors.muted, spacing: 1.3)),
-                      const SizedBox(height: 4),
-                      Text('Today', style: heading(34)),
+                      Text('HERO TIME', style: heading(15, color: AppColors.green).copyWith(letterSpacing: 3)),
+                      const SizedBox(height: 2),
+                      Text(fmtLong(today).toUpperCase(), style: eyebrow(size: 10)),
                     ],
                   ),
                 ),
-                IconButton(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
-                  icon: const Icon(Icons.settings_outlined, color: AppColors.muted),
+                _RoundIcon(
+                  icon: Icons.tune_rounded,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
                 ),
               ],
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 26),
+            Text('Welcome back,', style: ui(15, color: AppColors.muted)),
+            const SizedBox(height: 2),
+            Text(s.settings.petName, style: heading(34)),
+            const SizedBox(height: 20),
 
-            // Companion card
+            // Hero card: the active alien
             Panel(
-              padding: const EdgeInsets.fromLTRB(10, 10, 18, 14),
+              glow: al.color,
+              padding: EdgeInsets.zero,
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CharacterScreen())),
-              child: Row(
+              child: Stack(
                 children: [
-                  CharacterView(alien: al, mood: moodFor(s), size: 104),
-                  const SizedBox(width: 8),
-                  Expanded(
+                  // Watermark watch face
+                  Positioned(
+                    right: -60,
+                    top: -50,
+                    child: Transform.rotate(
+                      angle: -0.25,
+                      child: const OmnitrixLogo(size: 230, glow: false, opacity: 0.06),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: const Alignment(-0.7, -0.2),
+                          radius: 0.9,
+                          colors: [al.color.withValues(alpha: 0.18), Colors.transparent],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 14, 20, 18),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(s.settings.petName, style: heading(21)),
-                        const SizedBox(height: 2),
-                        Text.rich(
-                          TextSpan(children: [
-                            TextSpan(text: 'Lv ${p.level} · ${al.name}', style: ui(12.5, weight: FontWeight.w600, color: al.color)),
-                            if (nx != null)
-                              TextSpan(text: '  ·  next alien Lv ${nx.level}', style: ui(11.5, color: AppColors.faint)),
-                          ]),
-                        ),
-                        const SizedBox(height: 10),
-                        XpBar(value: p.fraction, color: al.color),
-                        const SizedBox(height: 12),
                         Row(
                           children: [
-                            _Kpi(label: 'Score', value: score?.toString() ?? '—'),
-                            _Kpi(label: 'Today', value: '${snap.doneToday}/${s.habits.length}'),
-                            _Kpi(label: 'XP', value: '${p.xp}'),
+                            CharacterView(alien: al, mood: moodFor(s), size: 128),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(children: [
+                                    Chip2('Lv ${p.level}', color: AppColors.green, filled: true),
+                                    const SizedBox(width: 6),
+                                    Flexible(child: Chip2(al.species, color: al.color)),
+                                  ]),
+                                  const SizedBox(height: 10),
+                                  Text(al.name, style: heading(24)),
+                                  const SizedBox(height: 4),
+                                  Text(al.blurb, style: ui(12.5, color: AppColors.muted, height: 1.35)),
+                                ],
+                              ),
+                            ),
                           ],
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Text('OMNITRIX CHARGE', style: eyebrow(size: 9.5)),
+                                  const Spacer(),
+                                  Text(nx == null ? 'All DNA unlocked' : 'Next DNA at Lv ${nx.level}',
+                                      style: ui(11, color: AppColors.faint, weight: FontWeight.w600)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              XpBar(value: p.fraction, color: AppColors.green),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  _Kpi(label: 'Score', value: score?.toString() ?? '—'),
+                                  const _VDivider(),
+                                  _Kpi(label: 'Today', value: '${snap.doneToday}/${s.habits.length}'),
+                                  const _VDivider(),
+                                  _Kpi(label: 'XP', value: '${p.xp}'),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -132,19 +189,21 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
 
-            const SectionLabel('All habits', trailing: HeatLegend(color: AppColors.green)),
+            const SectionLabel('Mission log', trailing: HeatLegend(color: AppColors.green)),
             Panel(
               child: Column(
                 children: [
                   Heatmap(valueFor: snap.intensity, color: AppColors.green),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   const Divider(height: 1, thickness: 1, color: AppColors.border),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
-                      _Kpi(label: 'Last 30 days', value: pct == null ? '—' : '$pct%'),
-                      _Kpi(label: 'All-habit streak', value: '$run'),
-                      _Kpi(label: 'Perfect days', value: '$perfect'),
+                      _Kpi(label: '30 days', value: pct == null ? '—' : '$pct%'),
+                      const _VDivider(),
+                      _Kpi(label: 'Streak', value: '$run'),
+                      const _VDivider(),
+                      _Kpi(label: 'Perfect', value: '$perfect'),
                     ],
                   ),
                 ],
@@ -152,15 +211,23 @@ class HomeScreen extends StatelessWidget {
             ),
 
             SectionLabel(
-              'Habits',
+              'Missions',
               trailing: GestureDetector(
                 onTap: () => _addHabit(context, s, p),
-                child: Row(
-                  children: [
-                    const Icon(Icons.add_rounded, size: 17, color: AppColors.green),
-                    const SizedBox(width: 2),
-                    Text('Add', style: ui(12.5, weight: FontWeight.w700, color: AppColors.green)),
-                  ],
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(8, 5, 12, 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.green.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: AppColors.green.withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.add_rounded, size: 16, color: AppColors.green),
+                      const SizedBox(width: 3),
+                      Text('NEW', style: eyebrow(size: 10, color: AppColors.green).copyWith(fontWeight: FontWeight.w700)),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -170,7 +237,7 @@ class HomeScreen extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   child: Center(
-                    child: Text('No habits yet. Tap to add your first.', style: ui(14, color: AppColors.muted)),
+                    child: Text('No missions yet. Tap to add your first.', style: ui(14, color: AppColors.muted)),
                   ),
                 ),
               ),
@@ -183,8 +250,8 @@ class HomeScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Center(
-                  child: Text('Tap ✓ to log · long-press for notes & tags · tap a square to backfill',
-                      style: ui(11.5, color: AppColors.faint)),
+                  child: Text('Tap ✓ to log  ·  hold for notes & tags  ·  tap a square to backfill',
+                      style: ui(11, color: AppColors.faint)),
                 ),
               ),
           ],
@@ -201,11 +268,35 @@ class _Kpi extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Expanded(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(value, style: heading(17)),
-            Text(label, style: ui(10.5, color: AppColors.muted)),
+            Text(value, style: heading(18)),
+            const SizedBox(height: 4),
+            Text(label.toUpperCase(), style: eyebrow(size: 9)),
           ],
+        ),
+      );
+}
+
+class _VDivider extends StatelessWidget {
+  const _VDivider();
+
+  @override
+  Widget build(BuildContext context) => Container(width: 1, height: 28, color: AppColors.border);
+}
+
+class _RoundIcon extends StatelessWidget {
+  const _RoundIcon({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppColors.cardHi,
+        shape: const CircleBorder(side: BorderSide(color: AppColors.border)),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Padding(padding: const EdgeInsets.all(10), child: Icon(icon, size: 20, color: AppColors.text)),
         ),
       );
 }

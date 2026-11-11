@@ -3,7 +3,7 @@
 // Patches the generated Android project for scheduled notifications:
 //  - enables core library desugaring (required by flutter_local_notifications)
 //  - adds notification / boot / internet permissions and the plugin's receivers
-//  - sets the app label to "Ember"
+//  - sets the app label to "Hero Time"
 import 'dart:io';
 
 const _desugarDep = 'com.android.tools:desugar_jdk_libs:2.1.4';
@@ -82,7 +82,7 @@ void _patchManifest() {
     s = s.substring(0, i) + receivers + '    ' + s.substring(i);
   }
 
-  s = s.replaceFirst(RegExp(r'android:label="[^"]*"'), 'android:label="Ember"');
+  s = s.replaceFirst(RegExp(r'android:label="[^"]*"'), 'android:label="Hero Time"');
   f.writeAsStringSync(s);
   stdout.writeln('✓ ${f.path}: permissions, receivers, label');
 }

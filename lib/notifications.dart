@@ -27,11 +27,11 @@ class Reminders {
 
   static const _lines = [
     'Two taps and your day is logged.',
-    "Don't let the streak go cold.",
+    "Don't let the Omnitrix time out.",
     'Small days add up. Log this one.',
-    'Your companion is hungry for consistency.',
+    'The Omnitrix is charged. Time to log.',
     'Quick check-in before bed?',
-    'Every green square started as a choice.',
+    'Every green square is a mission complete.',
     'Log it while you remember it.',
   ];
 
@@ -58,7 +58,7 @@ class Reminders {
 
   static Future<void> showTest(String petName) async {
     if (!_ready) return;
-    await _plugin.show(1, '🔥 $petName says hi', 'Reminders are working. See you later.', _details);
+    await _plugin.show(1, '⌚ Hero Time is online', 'Reminders are working, $petName. See you later.', _details);
   }
 
   /// Serialised so rapid edits don't interleave cancel/schedule calls.
@@ -86,7 +86,7 @@ class Reminders {
         final pending = s.pendingToday;
         if (pending.isEmpty && st.skipIfLogged) continue;
         body = pending.isEmpty
-            ? 'All logged today. Nice. 🌱'
+            ? 'All missions done today. Hero work. 💚'
             : 'Still to log: ${pending.map((h) => h.name).join(', ')}';
       } else {
         body = _lines[(at.day + i) % _lines.length];
@@ -95,7 +95,7 @@ class Reminders {
       // The absolute instant is correct in UTC, so no timezone lookup is needed.
       await _plugin.zonedSchedule(
         _baseId + i,
-        '${st.petName} is waiting 🔥',
+        '⌚ It\'s hero time, ${st.petName}',
         body,
         tz.TZDateTime.from(at, tz.UTC),
         _details,

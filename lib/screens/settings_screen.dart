@@ -19,7 +19,7 @@ class SettingsScreen extends StatelessWidget {
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(m)));
 
-    return Scaffold(
+    return AppScaffold(
       appBar: flatAppBar('Settings'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 48),
@@ -67,16 +67,16 @@ class SettingsScreen extends StatelessWidget {
           const SectionLabel('Customise'),
           _Group(children: [
             _Tile(
-              title: 'Companion name',
+              title: 'Hero name',
               trailing: Text(st.petName, style: ui(14, color: AppColors.muted)),
               onTap: () async {
-                final n = await promptText(context, title: 'Name your companion', initial: st.petName);
+                final n = await promptText(context, title: 'Name your hero', initial: st.petName);
                 if (n != null && n.trim().isNotEmpty) s.updateSettings((x) => x.petName = n.trim());
               },
             ),
             _Switch(
               title: 'Sound effects',
-              subtitle: 'Ticks, level-ups and alien unlocks',
+              subtitle: 'Ticks, level-ups, unlocks and transforms',
               value: st.sound,
               onChanged: (v) {
                 s.updateSettings((x) => x.sound = v);
@@ -85,7 +85,7 @@ class SettingsScreen extends StatelessWidget {
             ),
             _Switch(
               title: 'Unlock everything',
-              subtitle: 'Skip level gates for aliens, habit slots and colours',
+              subtitle: 'Skip level gates for DNA, mission slots and colours',
               value: st.unlockAll,
               onChanged: (v) => s.updateSettings((x) => x.unlockAll = v),
             ),
@@ -116,7 +116,7 @@ class SettingsScreen extends StatelessWidget {
                   action: 'Import',
                 );
                 if (raw == null || raw.trim().isEmpty) return;
-                toast(s.importJson(raw) ? 'Backup restored' : "That doesn't look like an Ember backup");
+                toast(s.importJson(raw) ? 'Backup restored' : "That doesn't look like a Hero Time backup");
               },
             ),
             _Tile(
@@ -134,7 +134,11 @@ class SettingsScreen extends StatelessWidget {
             ),
           ]),
           const SizedBox(height: 28),
-          Center(child: Text('Ember · everything stays on this device', style: ui(11.5, color: AppColors.faint))),
+          Center(child: OmnitrixLogo(size: 40, opacity: 0.9)),
+          const SizedBox(height: 12),
+          Center(child: Text('HERO TIME', style: heading(13, color: AppColors.muted).copyWith(letterSpacing: 3))),
+          const SizedBox(height: 4),
+          Center(child: Text('Everything stays on this device', style: ui(11.5, color: AppColors.faint))),
         ],
       ),
     );
@@ -147,13 +151,8 @@ class _Group extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
-      ),
-      clipBehavior: Clip.antiAlias,
+    return Panel(
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
           for (var i = 0; i < children.length; i++) ...[
