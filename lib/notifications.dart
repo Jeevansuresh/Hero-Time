@@ -47,13 +47,29 @@ class Reminders {
     }
   }
 
+  static AndroidFlutterLocalNotificationsPlugin? get _android =>
+      _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
   static Future<bool> requestPermission() async {
     try {
-      final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-      return await android?.requestNotificationsPermission() ?? false;
+      final ok = await _android?.requestNotificationsPermission() ?? false;
+      // Exact alarms: granted automatically via USE_EXACT_ALARM on Android 13+;
+      // on Android 12 this opens the "Alarms & reminders" setting if needed.
+      if (await _android?.canScheduleExactNotifications() == false) {
+        await _android?.requestExactAlarmsPermission();
+      }
+      return ok;
     } catch (_) {
       return false;
     }
+  }
+
+  /// Exact when the phone allows it (fires on the minute), otherwise inexact.
+  static Future<AndroidScheduleMode> _mode() async {
+    try {
+      if (await _android?.canScheduleExactNotifications() ?? false) return AndroidScheduleMode.exactAllowWhileIdle;
+    } catch (_) {}
+    return AndroidScheduleMode.inexactAllowWhileIdle;
   }
 
   static Future<void> showTest(String petName) async {
@@ -76,6 +92,7 @@ class Reminders {
     final st = s.settings;
     if (!st.reminderOn || s.habits.isEmpty) return;
 
+    final mode = await _mode();
     final now = DateTime.now();
     for (var i = 0; i < _days; i++) {
       final at = DateTime(now.year, now.month, now.day + i, st.hour, st.minute);
@@ -99,7 +116,7 @@ class Reminders {
         body,
         tz.TZDateTime.from(at, tz.UTC),
         _details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: mode,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       );
     }

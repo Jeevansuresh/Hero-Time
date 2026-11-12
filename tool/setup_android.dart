@@ -59,11 +59,19 @@ void _patchManifest() {
     'android.permission.POST_NOTIFICATIONS',
     'android.permission.RECEIVE_BOOT_COMPLETED',
     'android.permission.VIBRATE',
+    'android.permission.USE_EXACT_ALARM', // reminders fire on time (auto-granted, Android 13+)
   ];
   final missing = perms.where((p) => !s.contains('"$p"')).map((p) => '    <uses-permission android:name="$p"/>\n').join();
   if (missing.isNotEmpty) {
     final i = s.indexOf('<application');
     s = s.substring(0, i) + missing + '\n    ' + s.substring(i);
+  }
+  if (!s.contains('SCHEDULE_EXACT_ALARM')) {
+    // Android 12 has no USE_EXACT_ALARM; it uses this user-grantable one instead.
+    final i = s.indexOf('<application');
+    s = s.substring(0, i) +
+        '<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32"/>\n\n    ' +
+        s.substring(i);
   }
 
   if (!s.contains('ScheduledNotificationReceiver')) {

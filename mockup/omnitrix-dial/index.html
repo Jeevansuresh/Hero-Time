@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Omnitrix Dial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #030504; --card: #0A0F0C; --cardHi: #111814; --border: #1B2620;
+    --text: #F2F6EF; --muted: #8E9C92; --faint: #55625A;
+    --lime: #C0D72D; --watch: #4CBF45; --steel: #7E858B;
+    --alien: #FF7A1A;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: #000; color: var(--text); font-family: Inter, system-ui, sans-serif; }
+  body { display: flex; justify-content: center; }
+  button { font: inherit; color: inherit; }
+
+  .app {
+    position: relative; width: 100%; max-width: 430px; min-height: 100dvh;
+    background: var(--bg); overflow-x: clip; display: flex; flex-direction: column;
+    user-select: none; -webkit-user-select: none;
+  }
+  .backdrop { position: absolute; inset: 0; pointer-events: none; }
+  .backdrop::before {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(110% 55% at 50% -12%, rgba(76,191,69,.20), rgba(192,215,45,.035) 45%, transparent 75%);
+  }
+  .backdrop::after {
+    content: ""; position: absolute; inset: 0 0 45% 0;
+    background:
+      repeating-linear-gradient(0deg, rgba(192,215,45,.04) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(90deg, rgba(192,215,45,.04) 0 1px, transparent 1px 28px);
+    -webkit-mask-image: linear-gradient(#000, transparent); mask-image: linear-gradient(#000, transparent);
+  }
+
+  /* Header */
+  .app > * { flex-shrink: 0; }
+  header { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 14px 16px 4px; }
+  .back { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: none; border: 0; color: var(--text); }
+  header img { width: 26px; height: 26px; filter: drop-shadow(0 0 8px rgba(192,215,45,.45)); }
+  header h1 { font: 700 15px Orbitron, sans-serif; letter-spacing: 3px; margin: 0; flex: 1; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 30px;
+    font: 700 9.5px Inter, sans-serif; letter-spacing: 1.6px; text-transform: uppercase;
+    border: 1px solid color-mix(in srgb, var(--c, var(--lime)) 40%, transparent);
+    background: color-mix(in srgb, var(--c, var(--lime)) 13%, transparent); color: var(--c, var(--lime));
+  }
+  .chip.filled { background: var(--lime); color: #0B0F05; border-color: var(--lime); }
+
+  /* Hologram stage */
+  .stage { position: relative; z-index: 1; flex: 1 1 222px; min-height: 150px; max-height: 240px; margin-top: 4px; display: grid; place-items: center; container-type: size; }
+  .beam {
+    position: absolute; left: 50%; bottom: -34px; width: 300px; height: 300px; transform: translateX(-50%);
+    clip-path: polygon(41% 100%, 59% 100%, 100% 0, 0 0);
+    background: linear-gradient(to top, rgba(192,215,45,.42), rgba(192,215,45,.08) 60%, transparent);
+    opacity: 0; transition: opacity .35s;
+  }
+  .open .beam { opacity: 1; animation: beam 2.4s infinite; }
+  @keyframes beam { 0%,100% { filter: brightness(1); } 47% { filter: brightness(1); } 50% { filter: brightness(1.5); } 53% { filter: brightness(.8); } }
+
+  .figure { position: relative; width: min(220px, 96cqh); height: min(220px, 96cqh); display: grid; place-items: center; }
+  .figure .glow {
+    position: absolute; width: 150px; height: 150px; border-radius: 50%;
+    background: var(--alien); filter: blur(55px); opacity: .32; transition: background .4s, opacity .4s;
+  }
+  .figure .shadow {
+    position: absolute; bottom: 8px; width: 110px; height: 12px; border-radius: 50%;
+    background: rgba(0,0,0,.6); filter: blur(4px);
+  }
+  .figure img.real { position: relative; width: 100%; height: 100%; object-fit: contain; animation: float 4s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translateY(-4px); } 50% { transform: translateY(5px); } }
+  .figure.pop img.real { animation: pop .6s cubic-bezier(.2,1.4,.4,1), float 4s ease-in-out .6s infinite; }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* Hologram: alien shape filled with lime light + scanlines */
+  .holo { position: relative; width: 100%; height: 100%; animation: float 4s ease-in-out infinite; }
+  .holo .tint, .holo .lines {
+    position: absolute; inset: 0;
+    -webkit-mask: var(--src) center / contain no-repeat; mask: var(--src) center / contain no-repeat;
+  }
+  .holo img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+    filter: grayscale(1) contrast(1.15) brightness(1.15); mix-blend-mode: luminosity; opacity: .55;
+  }
+  .holo .tint { background: linear-gradient(180deg, #E4F57A, var(--lime) 45%, #4CBF45); opacity: .85; }
+  .holo .lines {
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.35) 0 2px, transparent 2px 4px);
+    animation: scan 1.2s linear infinite;
+  }
+  @keyframes scan { to { background-position: 0 8px; } }
+  .holo-wrap { position: relative; width: 100%; height: 100%; filter: drop-shadow(0 0 14px rgba(192,215,45,.55)); }
+  .glitch { animation: glitch .22s steps(2) 1; }
+  @keyframes glitch {
+    0% { transform: translateX(-6px) skewX(6deg); opacity: .4; }
+    50% { transform: translateX(5px) skewX(-4deg); opacity: .8; }
+    100% { transform: none; opacity: 1; }
+  }
+
+  /* Locked = same treatment as the locked DNA card: dark silhouette + ? */
+  .mystery { position: relative; width: 100%; height: 100%; }
+  .mystery img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+    filter: brightness(0) drop-shadow(0 0 1px rgba(192,215,45,.7)) drop-shadow(0 0 12px rgba(192,215,45,.25));
+    opacity: .95;
+  }
+  .mystery .q {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font: 800 64px Orbitron, sans-serif; color: rgba(192,215,45,.85); text-shadow: 0 0 18px rgba(192,215,45,.7);
+  }
+
+  /* Info */
+  .info { position: relative; z-index: 1; text-align: center; padding: 0 20px; min-height: 100px; }
+  .info h2 { font: 800 27px Orbitron, sans-serif; letter-spacing: .5px; margin: 10px 0 4px; }
+  .info p { margin: 0; color: var(--muted); font-size: 13.5px; }
+  .info .status { margin-top: 8px; font: 600 10.5px Inter; letter-spacing: 1.6px; text-transform: uppercase; color: var(--faint); }
+  .info .status b { color: var(--lime); font-weight: 700; }
+
+  /* Watch */
+  .watch-wrap { --w: 304px; --R: calc(var(--w) * .415); position: relative; z-index: 1; width: var(--w); height: var(--w); margin: 26px auto 0; touch-action: none; cursor: grab; }
+  .watch-wrap:active { cursor: grabbing; }
+  .pointer {
+    position: absolute; left: 50%; top: 2px; transform: translateX(-50%); width: 0; height: 0;
+    border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 11px solid var(--lime);
+    filter: drop-shadow(0 0 6px var(--lime)); opacity: 0; transition: opacity .3s;
+  }
+  .orbit { position: absolute; inset: 0; transition: transform .35s cubic-bezier(.2,.9,.3,1); }
+  .dragging .orbit, .dragging #dial { transition: none !important; }
+  .thumb {
+    position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border-radius: 50%;
+    background: linear-gradient(180deg, var(--cardHi), var(--card)); border: 1.5px solid var(--border);
+    display: grid; place-items: center; overflow: hidden;
+    opacity: 0; transform: rotate(var(--a)) translateY(calc(-1 * var(--R))) rotate(calc(-1 * var(--a) - var(--r))) scale(.4);
+    transition: opacity .35s, transform .45s cubic-bezier(.2,1.3,.4,1), border-color .2s, box-shadow .2s;
+  }
+  .open .thumb { opacity: 1; transform: rotate(var(--a)) translateY(calc(-1 * var(--R))) rotate(calc(-1 * var(--a) - var(--r))) scale(1); }
+  .open .thumb.sel { transform: rotate(var(--a)) translateY(calc(-1 * var(--R))) rotate(calc(-1 * var(--a) - var(--r))) scale(1.2); border-color: var(--lime); box-shadow: 0 0 16px rgba(192,215,45,.6); }
+  .thumb img { width: 88%; height: 88%; object-fit: contain; }
+  .thumb.locked img { filter: brightness(0) drop-shadow(0 0 1px rgba(192,215,45,.6)); opacity: .9; }
+  .thumb.locked::after { content: "?"; position: absolute; font: 800 15px Orbitron; color: var(--lime); text-shadow: 0 0 6px var(--lime); }
+  .thumb.unlocked { border-color: color-mix(in srgb, var(--c) 45%, transparent); }
+  .thumb.current::before {
+    content: ""; position: absolute; right: 3px; bottom: 3px; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--lime); box-shadow: 0 0 6px var(--lime); z-index: 1;
+  }
+
+  svg.watch { position: absolute; left: 50%; top: 50%; width: calc(var(--w) * .645); height: calc(var(--w) * .645); margin: calc(var(--w) * -.3225); overflow: visible; }
+  @media (max-height: 860px) { .watch-wrap { --w: 272px; margin-top: 20px; } .controls { padding: 10px 20px 6px; } .info h2 { font-size: 24px; margin-top: 8px; } .info { min-height: 92px; } }
+  @media (max-height: 700px) { .watch-wrap { --w: 244px; margin-top: 20px; } .thumb { transform-origin: center; } }
+  #dial { transition: transform .35s cubic-bezier(.2,.9,.3,1); }
+  .face { transition: transform .4s cubic-bezier(.2,1.6,.4,1); transform-origin: 0 0; }
+  .open .face { transform: scale(1.07); }
+  .hg { transition: filter .35s; }
+  .open .hg { filter: brightness(1.2) drop-shadow(0 0 7px rgba(214,240,80,.9)); animation: pulse 1.6s ease-in-out infinite .4s; }
+  @keyframes pulse { 50% { filter: brightness(1.45) drop-shadow(0 0 12px rgba(214,240,80,1)); } }
+  .slam .face { transform: scale(.94); transition-duration: .08s; }
+  .tick { opacity: 0; transition: opacity .3s; }
+  .open .tick { opacity: 1; }
+  .watch-glow { position: absolute; left: 50%; top: 50%; width: 200px; height: 200px; margin: -100px; border-radius: 50%; background: var(--lime); filter: blur(60px); opacity: .10; transition: opacity .4s; }
+  .open .watch-glow { opacity: .28; }
+
+  .hint { text-align: center; color: var(--faint); font-size: 11.5px; margin: 6px 0 0; min-height: 16px; }
+
+  /* Controls */
+  .controls { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 20px 10px; }
+  .round {
+    width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--cardHi), var(--card)); display: grid; place-items: center; cursor: pointer;
+    transition: opacity .3s;
+  }
+  .round:disabled { opacity: .3; cursor: default; }
+  .cta {
+    flex: 1; max-width: 230px; height: 52px; border-radius: 30px; border: 0; cursor: pointer;
+    font: 800 13px Orbitron, sans-serif; letter-spacing: 2px; color: #0B0F05;
+    background: linear-gradient(180deg, #D7EC4A, var(--lime)); box-shadow: 0 0 24px rgba(192,215,45,.35), inset 0 1px 0 rgba(255,255,255,.4);
+    transition: transform .1s, filter .2s, background .2s, color .2s, box-shadow .2s;
+  }
+  .cta:active { transform: scale(.97); }
+  .cta.locked { background: var(--cardHi); color: var(--faint); box-shadow: none; border: 1px solid var(--border); }
+  .shake { animation: shake .35s; }
+  @keyframes shake { 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
+
+  /* Mockup-only controls */
+  details.mock { position: relative; z-index: 1; margin: 6px 20px 22px; padding: 10px 14px; border: 1px dashed var(--border); border-radius: 14px; color: var(--faint); font-size: 12px; }
+  details.mock summary { cursor: pointer; letter-spacing: 1.4px; text-transform: uppercase; font-size: 10px; font-weight: 600; }
+  details.mock label { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  details.mock input { flex: 1; accent-color: var(--lime); }
+
+  .flash { position: fixed; inset: 0; pointer-events: none; z-index: 10; opacity: 0;
+    background: radial-gradient(circle at 50% 62%, #fff 0%, rgba(192,215,45,.95) 30%, rgba(76,191,69,.6) 60%, rgba(3,5,4,0) 100%); }
+  .flash.go { animation: flash .9s ease-out; }
+  @keyframes flash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); z-index: 11; opacity: 0;
+    padding: 12px 16px; border-radius: 16px; background: var(--cardHi); border: 1px solid rgba(192,215,45,.35);
+    font-weight: 600; font-size: 14px; white-space: nowrap; transition: opacity .25s, transform .25s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="backdrop"></div>
+
+  <header>
+    <button class="back" aria-label="Back">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <img src="../../assets/brand/omnitrix.png" alt="">
+    <h1>OMNITRIX</h1>
+    <span class="chip filled" id="lvChip">LV 9</span>
+  </header>
+
+  <section class="stage">
+    <div class="beam"></div>
+    <div class="figure" id="figure"></div>
+  </section>
+
+  <section class="info" id="info"></section>
+
+  <div class="watch-wrap" id="watch">
+    <div class="watch-glow"></div>
+    <div class="orbit" id="orbit"></div>
+      <svg class="watch" viewBox="-120 -120 240 240" aria-label="Omnitrix dial">
+      <defs>
+        <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#3a403c"/><stop offset=".5" stop-color="#151917"/><stop offset="1" stop-color="#2a302c"/>
+        </linearGradient>
+        <linearGradient id="hgGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#D9EE52"/><stop offset="1" stop-color="#B4CC22"/>
+        </linearGradient>
+      </defs>
+      <!-- Rotating bezel -->
+      <g id="dial"></g>
+      <!-- Static steel ring -->
+      <circle r="90" fill="none" stroke="#63696E" stroke-width="16"/>
+      <path d="M 52 -73 A 90 90 0 0 1 83 -34" fill="none" stroke="#E8ECEF" stroke-width="16"/>
+      <path d="M -52 73 A 90 90 0 0 1 -83 34" fill="none" stroke="#E8ECEF" stroke-width="16"/>
+      <circle r="98.5" fill="none" stroke="#050605" stroke-width="2"/>
+      <circle r="81.5" fill="none" stroke="#050605" stroke-width="2"/>
+      <!-- Face -->
+      <g class="face">
+        <circle r="80" fill="#050605"/>
+        <g class="hg">
+          <path d="M -50 -60 A 78 78 0 0 1 50 -60 L 8 -3 L -8 -3 Z" fill="url(#hgGrad)"/>
+          <path d="M -50 60 A 78 78 0 0 0 50 60 L 8 3 L -8 3 Z" fill="url(#hgGrad)"/>
+        </g>
+      </g>
+      <path class="tick" d="M -7 -83 L 7 -83 L 0 -96 Z" fill="#C0D72D" stroke="#050605" stroke-width="1.5"/>
+    </svg>
+  </div>
+  <p class="hint" id="hint"></p>
+
+  <div class="controls">
+    <button class="round" id="prev" aria-label="Previous alien" disabled>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <button class="cta" id="cta">ACTIVATE</button>
+    <button class="round" id="next" aria-label="Next alien" disabled>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+
+  <details class="mock">
+    <summary>Mockup only · preview controls</summary>
+    <label>Hero level <input type="range" id="lv" min="1" max="20" value="9"> <b id="lvOut">9</b></label>
+  </details>
+</div>
+<div class="flash" id="flash"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const ALIENS = [
+  ['heatblast', 'Heatblast', 'Pyronite', 1, '#FF7A1A', 'Turns up the heat on every habit.'],
+  ['diamondhead', 'Diamondhead', 'Petrosapien', 2, '#6FE3A8', 'Routines as hard as crystal.'],
+  ['xlr8', 'XLR8', 'Kineceleran', 4, '#3FB4FF', 'Fastest check-in in the galaxy.'],
+  ['fourarms', 'Four Arms', 'Tetramand', 6, '#FF3B3B', 'Four arms, four gym days.'],
+  ['cannonbolt', 'Cannonbolt', 'Arburian Pelarota', 8, '#FFC21A', 'Rolls right through excuses.'],
+  ['swampfire', 'Swampfire', 'Methanosian', 10, '#8BC34A', 'Grows back stronger after a slip.'],
+  ['jetray', 'Jetray', 'Aerophibian', 12, '#E0313F', 'Flies over every craving.'],
+  ['bigchill', 'Big Chill', 'Necrofriggian', 14, '#4A8BFF', 'Ice cold under pressure.'],
+  ['humungousaur', 'Humungousaur', 'Vaxasaurian', 16, '#D4A65A', 'Grows bigger with every rep.'],
+  ['waybig', 'Way Big', "To'kustar", 18, '#E8E8EE', 'Discipline on a cosmic scale.'],
+  ['alienx', 'Alien X', 'Celestialsapien', 20, '#C0D72D', 'Infinite power. Total consistency.'],
+].map(([id, name, species, level, color, blurb]) => ({ id, name, species, level, color, blurb, src: `../../assets/aliens/${id}.png` }));
+
+const N = ALIENS.length, STEP = 360 / N;
+const $ = (id) => document.getElementById(id);
+const app = $('app'), watch = $('watch'), orbit = $('orbit'), dial = $('dial'), figure = $('figure'), info = $('info');
+
+let level = 9, current = 'xlr8', open = false, rot = 0, sel = 0;
+const unlocked = (a) => level >= a.level;
+const mod = (n, m) => ((n % m) + m) % m;
+const indexAt = (r) => mod(Math.round(-r / STEP), N);
+
+// ---------- Sound ----------
+const sfx = {
+  initiate: new Audio('../../assets/sfx/omnitrix_initiate.mp3'),
+  transform: new Audio('../../assets/sfx/transform_theme.mp3'),
+};
+function play(name) { const a = sfx[name]; try { a.currentTime = 0; a.play(); } catch (e) {} }
+let ctx;
+function beep(kind) {
+  ctx ||= new (window.AudioContext || window.webkitAudioContext)();
+  const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  if (kind === 'click') {
+    o.type = 'square'; o.frequency.setValueAtTime(2400, t); o.frequency.exponentialRampToValueAtTime(900, t + .03);
+    g.gain.setValueAtTime(.06, t); g.gain.exponentialRampToValueAtTime(.0001, t + .045); o.start(t); o.stop(t + .05);
+  } else if (kind === 'denied') {
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(150, t); o.frequency.linearRampToValueAtTime(110, t + .28);
+    g.gain.setValueAtTime(.08, t); g.gain.exponentialRampToValueAtTime(.0001, t + .3); o.start(t); o.stop(t + .32);
+  } else if (kind === 'close') {
+    o.type = 'triangle'; o.frequency.setValueAtTime(700, t); o.frequency.exponentialRampToValueAtTime(260, t + .16);
+    g.gain.setValueAtTime(.07, t); g.gain.exponentialRampToValueAtTime(.0001, t + .18); o.start(t); o.stop(t + .2);
+  }
+}
+
+// ---------- Build dial ----------
+function arc(r, a0, a1) {
+  const p = (a) => [r * Math.sin(a * Math.PI / 180), -r * Math.cos(a * Math.PI / 180)];
+  const [x0, y0] = p(a0), [x1, y1] = p(a1);
+  return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+}
+dial.innerHTML =
+  `<circle r="116" fill="url(#steel)" stroke="#000" stroke-width="2"/>` +
+  [...Array(8)].map((_, i) => `<path d="${arc(107, i * 45 + 3, i * 45 + 42)}" stroke="#4CBF45" stroke-width="14" fill="none"/>`).join('') +
+  [...Array(N)].map((_, i) => {
+    const a = i * STEP * Math.PI / 180;
+    return `<line x1="${(113 * Math.sin(a)).toFixed(1)}" y1="${(-113 * Math.cos(a)).toFixed(1)}" x2="${(119 * Math.sin(a)).toFixed(1)}" y2="${(-119 * Math.cos(a)).toFixed(1)}" stroke="#C9D0CC" stroke-width="2.5" stroke-linecap="round"/>`;
+  }).join('') +
+  `<circle r="99" fill="none" stroke="#000" stroke-width="2"/>`;
+
+orbit.innerHTML = ALIENS.map((a, i) =>
+  `<div class="thumb" data-i="${i}" style="--a:${i * STEP}deg;--c:${a.color}"><img src="${a.src}" alt=""></div>`).join('');
+const thumbs = [...orbit.children];
+
+// ---------- Render ----------
+function setRot(r, animate = true) {
+  rot = r;
+  watch.classList.toggle('dragging', !animate);
+  dial.style.transform = `rotate(${rot}deg)`;
+  orbit.style.transform = `rotate(${rot}deg)`;
+  orbit.style.setProperty('--r', `${rot}deg`);
+  thumbs.forEach((t) => t.style.setProperty('--r', `${rot}deg`));
+  const i = indexAt(rot);
+  if (i !== sel) { sel = i; if (open) { beep('click'); renderSelection(true); } }
+}
+
+function renderThumbs() {
+  thumbs.forEach((t, i) => {
+    const a = ALIENS[i];
+    t.classList.toggle('locked', !unlocked(a));
+    t.classList.toggle('unlocked', unlocked(a));
+    t.classList.toggle('sel', i === sel);
+    t.classList.toggle('current', a.id === current);
+  });
+}
+
+function renderIdle(pop = false) {
+  const a = ALIENS.find((x) => x.id === current);
+  app.style.setProperty('--alien', a.color);
+  figure.className = 'figure' + (pop ? ' pop' : '');
+  figure.innerHTML = `<div class="glow"></div><div class="shadow"></div><img class="real" src="${a.src}" alt="${a.name}">`;
+  info.innerHTML = `
+    <span class="chip" style="--c:${a.color}">${a.species}</span>
+    <h2>${a.name}</h2>
+    <p>${a.blurb}</p>
+    <div class="status">Current form</div>`;
+  $('cta').textContent = 'ACTIVATE';
+  $('cta').classList.remove('locked');
+  $('hint').textContent = 'Tap the Omnitrix to activate';
+}
+
+function renderSelection(glitch = false) {
+  const a = ALIENS[sel], ok = unlocked(a);
+  renderThumbs();
+  figure.className = 'figure' + (glitch ? ' glitch' : '');
+  figure.innerHTML = ok
+    ? `<div class="holo-wrap"><div class="holo" style="--src:url('${a.src}')"><div class="tint"></div><img src="${a.src}" alt=""><div class="lines"></div></div></div>`
+    : `<div class="mystery"><img src="${a.src}" alt=""><div class="q">?</div></div>`;
+  info.innerHTML = ok
+    ? `<span class="chip" style="--c:${a.color}">${a.species}</span>
+       <h2>${a.name}</h2>
+       <p>${a.blurb}</p>
+       <div class="status">${a.id === current ? '<b>Current form</b>' : 'DNA ready'}</div>`
+    : `<span class="chip" style="--c:#55625A">Unknown DNA</span>
+       <h2>? ? ?</h2>
+       <p>DNA sample not yet scanned.</p>
+       <div class="status">Unlocks at <b>Lv ${a.level}</b> · ${a.level - level} to go</div>`;
+  const cta = $('cta');
+  cta.textContent = ok ? (a.id === current ? 'CLOSE' : 'TRANSFORM') : 'LOCKED';
+  cta.classList.toggle('locked', !ok);
+  $('hint').textContent = 'Drag the dial to browse DNA · slam the hourglass to transform';
+}
+
+function activate() {
+  if (open) return;
+  open = true;
+  app.classList.add('open');
+  play('initiate');
+  // Start on the current alien.
+  const i = ALIENS.findIndex((a) => a.id === current);
+  sel = i;
+  setRot(-i * STEP + Math.round(rot / 360) * 360);
+  $('prev').disabled = $('next').disabled = false;
+  renderSelection(true);
+}
+
+function close(pop) {
+  open = false;
+  app.classList.remove('open');
+  $('prev').disabled = $('next').disabled = true;
+  renderThumbs();
+  renderIdle(pop);
+}
+
+function transform() {
+  const a = ALIENS[sel];
+  if (!unlocked(a)) {
+    beep('denied');
+    $('cta').classList.add('shake'); setTimeout(() => $('cta').classList.remove('shake'), 400);
+    return;
+  }
+  if (a.id === current) { beep('close'); close(false); return; }
+  play('transform');
+  app.classList.add('slam'); setTimeout(() => app.classList.remove('slam'), 120);
+  const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+  setTimeout(() => { current = a.id; close(true); toast(`Transformed into ${a.name}`); }, 260);
+}
+
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ---------- Dial gestures ----------
+let drag = null;
+const angleOf = (e) => {
+  const r = watch.getBoundingClientRect();
+  return Math.atan2(e.clientX - (r.left + r.width / 2), -(e.clientY - (r.top + r.height / 2))) * 180 / Math.PI;
+};
+watch.addEventListener('pointerdown', (e) => {
+  watch.setPointerCapture(e.pointerId);
+  const r = watch.getBoundingClientRect();
+  const dist = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+  const faceR = (80 / 240) * document.querySelector('svg.watch').getBoundingClientRect().width;
+  drag = { last: angleOf(e), moved: 0, onCore: dist < faceR };
+});
+watch.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  let d = angleOf(e) - drag.last;
+  if (d > 180) d -= 360; if (d < -180) d += 360;
+  drag.last += d;
+  drag.moved += Math.abs(d);
+  if (drag.moved > 6) {
+    if (!open) activate();
+    setRot(rot + d, false);
+  }
+});
+watch.addEventListener('pointerup', () => {
+  if (!drag) return;
+  const wasTap = drag.moved <= 6, onCore = drag.onCore;
+  drag = null;
+  if (wasTap) { if (!open) activate(); else if (onCore) transform(); return; }
+  setRot(Math.round(rot / STEP) * STEP, true); // snap to a detent
+});
+watch.addEventListener('pointercancel', () => { drag = null; setRot(Math.round(rot / STEP) * STEP, true); });
+
+// Swipe on the hologram also turns the dial.
+let sx = null;
+figure.parentElement.addEventListener('pointerdown', (e) => { sx = e.clientX; });
+figure.parentElement.addEventListener('pointerup', (e) => {
+  if (sx == null || !open) return;
+  const dx = e.clientX - sx; sx = null;
+  if (Math.abs(dx) > 40) setRot(rot + (dx < 0 ? -STEP : STEP));
+});
+
+$('prev').onclick = () => setRot(rot + STEP);
+$('next').onclick = () => setRot(rot - STEP);
+$('cta').onclick = () => (open ? transform() : activate());
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft' && open) setRot(rot + STEP);
+  if (e.key === 'ArrowRight' && open) setRot(rot - STEP);
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open ? transform() : activate(); }
+  if (e.key === 'Escape' && open) { beep('close'); close(false); }
+});
+
+$('lv').oninput = (e) => {
+  level = +e.target.value;
+  $('lvOut').textContent = level; $('lvChip').textContent = `LV ${level}`;
+  if (!unlocked(ALIENS.find((a) => a.id === current))) current = 'heatblast';
+  open ? renderSelection() : (renderThumbs(), renderIdle());
+};
+
+setRot(-ALIENS.findIndex((a) => a.id === current) * STEP, false);
+renderThumbs();
+renderIdle();
+</script>
+</body>
+</html>

@@ -22,6 +22,7 @@ Future<void> main() async {
   ));
 
   await Reminders.init();
+  Sfx.warmUp();
   final store = AppStore();
   await store.load();
   store.onLevelUp = (from, to) {

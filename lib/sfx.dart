@@ -1,32 +1,55 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
-/// Short synthesised sound effects bundled in assets/sfx.
+/// Sound effects bundled in assets/sfx.
+///
+/// Each effect gets its own preloaded player in normal media-player mode. (Android's
+/// low-latency SoundPool mode silently drops bundled asset sounds on many phones.)
 class Sfx {
   static bool enabled = true;
-  static final List<AudioPlayer> _pool = [];
-  static int _next = 0;
 
   /// Recorded clips that replace a synthesised effect.
-  static const _clips = {'transform': 'sfx/transform_theme.mp3'};
+  static const _clips = {
+    'transform': 'sfx/transform_theme.mp3',
+    'initiate': 'sfx/omnitrix_initiate.mp3',
+  };
+
+  static final Map<String, AudioPlayer> _players = {};
+  static final _context = AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers).build();
+
+  static String _path(String name) => _clips[name] ?? 'sfx/$name.wav';
+
+  static Future<AudioPlayer> _player(String name) async {
+    final existing = _players[name];
+    if (existing != null) return existing;
+    final p = AudioPlayer(playerId: 'sfx_$name');
+    await p.setAudioContext(_context);
+    await p.setReleaseMode(ReleaseMode.stop);
+    await p.setSource(AssetSource(_path(name)));
+    return _players[name] = p;
+  }
+
+  /// Load the common effects up front so the first tap isn't silent.
+  static Future<void> warmUp() async {
+    for (final n in ['check', 'undo', 'pop', 'goal', 'slip', 'dial']) {
+      try {
+        await _player(n);
+      } catch (e) {
+        debugPrint('Sfx.warmUp($n) failed: $e');
+      }
+    }
+  }
 
   static Future<void> play(String name) async {
     if (!enabled) return;
     try {
-      if (_pool.isEmpty) {
-        for (var i = 0; i < 4; i++) {
-          _pool.add(AudioPlayer());
-        }
-      }
-      final p = _pool[_next++ % _pool.length];
+      final p = await _player(name);
       await p.stop();
-      final clip = _clips[name];
-      await p.play(
-        AssetSource(clip ?? 'sfx/$name.wav'),
-        mode: clip != null ? PlayerMode.mediaPlayer : PlayerMode.lowLatency,
-      );
+      await p.seek(Duration.zero);
+      await p.resume();
     } catch (e) {
       debugPrint('Sfx.play($name) failed: $e');
+      _players.remove(name)?.dispose();
     }
   }
 }

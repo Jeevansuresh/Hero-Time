@@ -36,6 +36,8 @@ b = blank(1.7); noise(b, 0, .5, .07, 300, 6000); notes(b, [392, 523, 659, 784, 1
 for f in (1047, 1319, 1568): tone(b, f, .5, 1.1, 'sine', .05, attack=.05)
 S['unlock'] = b
 b = blank(.75); noise(b, 0, .45, .1, 200, 5000); tone(b, 180, 0, .45, 'sawtooth', .04, to=1400); tone(b, 1400, .42, .25, 'sine', .1, to=1760); S['transform'] = b
+b = blank(.06); tone(b, 2400, 0, .035, 'square', .05, to=900, attack=.002); noise(b, 0, .03, .05, 3000, 6000); S['dial'] = b
+b = blank(.34); tone(b, 150, 0, .3, 'sawtooth', .1, to=110); tone(b, 75, 0, .3, 'square', .04); S['denied'] = b
 out = sys.argv[1]
 for name, buf in S.items():
     peak = max(1e-6, max(abs(v) for v in buf)); k = min(1.0, .85 / peak) if peak > .85 else 1.0
