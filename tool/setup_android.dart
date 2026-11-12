@@ -4,14 +4,80 @@
 //  - enables core library desugaring (required by flutter_local_notifications)
 //  - adds notification / boot / internet permissions and the plugin's receivers
 //  - sets the app label to "Hero Time"
+//  - signs release builds with the key in android/key.properties when that file exists,
+//    so every build is the same app to Android and updates keep your data
 import 'dart:io';
 
 const _desugarDep = 'com.android.tools:desugar_jdk_libs:2.1.4';
 
 void main() {
   _patchGradle();
+  _patchSigning();
   _patchManifest();
   stdout.writeln('\nDone. Now run:  flutter pub get && flutter run');
+}
+
+/// Release signing from android/key.properties (storeFile, storePassword, keyAlias, keyPassword).
+/// Without that file, release builds keep using the debug key.
+void _patchSigning() {
+  final kts = File('android/app/build.gradle.kts');
+  final groovy = File('android/app/build.gradle');
+  if (kts.existsSync()) {
+    var s = kts.readAsStringSync();
+    if (s.contains('keystorePropertiesFile')) return;
+    s = 'import java.io.FileInputStream\nimport java.util.Properties\n\n$s';
+    s = s.replaceFirst('android {', '''val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
+    }
+''');
+    const debug = 'signingConfig = signingConfigs.getByName("debug")';
+    if (!s.contains(debug)) _fail('Could not find the release signingConfig line in ${kts.path}.');
+    s = s.replaceFirst(debug,
+        'signingConfig = if (keystorePropertiesFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")');
+    kts.writeAsStringSync(s);
+    stdout.writeln('✓ ${kts.path}: release signing from key.properties');
+  } else if (groovy.existsSync()) {
+    var s = groovy.readAsStringSync();
+    if (s.contains('keystorePropertiesFile')) return;
+    s = s.replaceFirst('android {', '''def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
+        }
+    }
+''');
+    const debug = 'signingConfig signingConfigs.debug';
+    if (!s.contains(debug)) _fail('Could not find the release signingConfig line in ${groovy.path}.');
+    s = s.replaceFirst(debug,
+        'signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug');
+    groovy.writeAsStringSync(s);
+    stdout.writeln('✓ ${groovy.path}: release signing from key.properties');
+  }
 }
 
 void _patchGradle() {

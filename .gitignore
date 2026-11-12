@@ -7,3 +7,8 @@ pubspec.lock
 *.iml
 .idea/
 assets/sfx/*.wav
+
+# Release signing (never commit)
+*.jks
+*.keystore
+key.properties
