@@ -32,6 +32,8 @@ Future<void> main() async {
       messengerKey.currentState
         ?..hideCurrentSnackBar()
         ..showSnackBar(SnackBar(
+          persist: false, // snackbars with an action otherwise stay until tapped
+          duration: const Duration(seconds: 4),
           content: Text(fresh.isEmpty ? "Omnitrix upgraded! You're Lv $to" : 'New DNA unlocked: ${fresh.last.name}'),
           action: fresh.isEmpty
               ? null

@@ -86,26 +86,24 @@ class AppStore extends ChangeNotifier {
     _save();
   }
 
-  /// Quick tap on the check button. Returns true if the habit is now done.
-  bool toggleToday(Habit h) {
-    final t = todayKey();
-    final cur = entry(h.id, t);
+  /// Tick (done = true) or cross (done = false) a day. Tapping the answer that's
+  /// already set clears the day, unless it has a note or tags (those are kept and
+  /// the day stays as it is; the log sheet's Clear button removes them).
+  /// Returns the day's state afterwards: true done, false missed, null unlogged.
+  bool? mark(Habit h, int day, bool done) {
+    final cur = entry(h.id, day);
     if (cur == null) {
-      setEntry(Entry(habitId: h.id, day: t, done: true));
-      return true;
+      setEntry(Entry(habitId: h.id, day: day, done: done));
+      return done;
     }
-    if (!cur.done) {
-      cur.done = true;
+    if (cur.done != done) {
+      cur.done = done;
       _save();
-      return true;
+      return done;
     }
-    if (cur.hasDetails) {
-      cur.done = false;
-      _save();
-    } else {
-      clearEntry(h.id, t);
-    }
-    return false;
+    if (cur.hasDetails) return done;
+    clearEntry(h.id, day);
+    return null;
   }
 
   void upsertHabit(Habit h) {

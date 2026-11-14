@@ -12,6 +12,7 @@ class Heatmap extends StatelessWidget {
     required this.color,
     this.weeks = 26,
     this.onTap,
+    this.missedFor,
     this.cell = 13,
     this.gap = 3.5,
   });
@@ -21,6 +22,9 @@ class Heatmap extends StatelessWidget {
   final Color color;
   final int weeks;
   final void Function(int day)? onTap;
+
+  /// Days marked as missed (✕) are drawn red, so they stand apart from unlogged days.
+  final bool Function(int day)? missedFor;
   final double cell;
   final double gap;
 
@@ -107,7 +111,9 @@ class Heatmap extends StatelessWidget {
     if (day > today) return SizedBox(width: cell, height: cell);
     final v = valueFor(day);
     final Color fill;
-    if (v < 0) {
+    if (v <= 0 && (missedFor?.call(day) ?? false)) {
+      fill = Color.lerp(AppColors.empty, AppColors.danger, 0.55)!;
+    } else if (v < 0) {
       fill = AppColors.empty.withValues(alpha: 0.45);
     } else if (v <= 0) {
       fill = AppColors.empty;

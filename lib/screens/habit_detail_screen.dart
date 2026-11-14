@@ -79,6 +79,7 @@ class HabitDetailScreen extends StatelessWidget {
               weeks: 30,
               color: color,
               valueFor: (d) => d < start ? -1 : (done.contains(d) ? 1 : 0),
+              missedFor: (d) => s.entry(h.id, d)?.done == false,
               onTap: (d) => showLogSheet(context, h, d),
             ),
           ),

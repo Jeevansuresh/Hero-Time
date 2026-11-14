@@ -30,9 +30,50 @@ class LogSheet extends StatefulWidget {
 }
 
 class _LogSheetState extends State<LogSheet> {
-  late bool _done = widget.existing?.done ?? true;
-  late final Set<String> _tags = {...?widget.existing?.tags};
-  late final TextEditingController _note = TextEditingController(text: widget.existing?.note ?? '');
+  late int _day = widget.day;
+  late Entry? _existing = widget.existing;
+  late bool _done = _existing?.done ?? true;
+  late final Set<String> _tags = {...?_existing?.tags};
+  late final TextEditingController _note = TextEditingController(text: _existing?.note ?? '');
+
+  /// Switch the sheet to another day and load what's logged there.
+  void _goTo(int day) {
+    if (day > todayKey()) return;
+    final e = StoreScope.read(context).entry(widget.habit.id, day);
+    setState(() {
+      _day = day;
+      _existing = e;
+      _done = e?.done ?? true;
+      _tags
+        ..clear()
+        ..addAll(e?.tags ?? const []);
+      _note.text = e?.note ?? '';
+    });
+  }
+
+  Future<void> _pickDate() async {
+    final now = dayDate(todayKey());
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: dayDate(_day),
+      firstDate: DateTime.utc(now.year - 3),
+      lastDate: now,
+      helpText: 'Log which day?',
+      builder: (c, child) => Theme(
+        data: Theme.of(c).copyWith(
+          colorScheme: Theme.of(c).colorScheme.copyWith(
+                primary: Color(widget.habit.color),
+                onPrimary: const Color(0xFF0B0B0F),
+                surface: AppColors.cardHi,
+                onSurface: AppColors.text,
+              ),
+          dialogTheme: const DialogThemeData(backgroundColor: AppColors.cardHi),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) _goTo(dayKey(picked));
+  }
 
   @override
   void dispose() {
@@ -47,7 +88,7 @@ class _LogSheetState extends State<LogSheet> {
       ..._tags.where((t) => !h.tags.contains(t)),
     ];
     Sfx.play(_done ? 'pop' : 'slip');
-    s.setEntry(Entry(habitId: h.id, day: widget.day, done: _done, note: _note.text.trim(), tags: ordered));
+    s.setEntry(Entry(habitId: h.id, day: _day, done: _done, note: _note.text.trim(), tags: ordered));
     Navigator.pop(context);
   }
 
@@ -56,7 +97,7 @@ class _LogSheetState extends State<LogSheet> {
     final s = StoreScope.of(context);
     final h = widget.habit;
     final color = Color(h.color);
-    final isToday = widget.day == todayKey();
+    final isToday = _day == todayKey();
     final allTags = [...h.tags, ..._tags.where((t) => !h.tags.contains(t))];
 
     return Padding(
@@ -77,12 +118,18 @@ class _LogSheetState extends State<LogSheet> {
                     children: [
                       Text(h.name, style: heading(21)),
                       const SizedBox(height: 2),
-                      Text('${fmtDay(widget.day)}${isToday ? ' · Today' : ''}',
-                          style: ui(13, color: AppColors.muted)),
                     ],
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 14),
+            _DateBar(
+              label: '${fmtDay(_day)}${isToday ? ' · Today' : ''}',
+              color: color,
+              onPrev: () => _goTo(_day - 1),
+              onNext: isToday ? null : () => _goTo(_day + 1),
+              onPick: _pickDate,
             ),
             const SizedBox(height: 20),
             Row(
@@ -148,13 +195,13 @@ class _LogSheetState extends State<LogSheet> {
             const SizedBox(height: 20),
             Row(
               children: [
-                if (widget.existing != null)
+                if (_existing != null)
                   Padding(
                     padding: const EdgeInsets.only(right: 10),
                     child: TextButton(
                       onPressed: () {
                         Sfx.play('undo');
-                        s.clearEntry(h.id, widget.day);
+                        s.clearEntry(h.id, _day);
                         Navigator.pop(context);
                       },
                       style: TextButton.styleFrom(minimumSize: const Size(64, 52)),
@@ -177,6 +224,54 @@ class _LogSheetState extends State<LogSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DateBar extends StatelessWidget {
+  const _DateBar({required this.label, required this.color, required this.onPrev, required this.onNext, required this.onPick});
+  final String label;
+  final Color color;
+  final VoidCallback onPrev;
+  final VoidCallback? onNext;
+  final VoidCallback onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget arrow(IconData i, VoidCallback? f, String tip) => IconButton(
+          tooltip: tip,
+          onPressed: f,
+          icon: Icon(i, color: f == null ? AppColors.faint.withValues(alpha: 0.4) : AppColors.text),
+        );
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          arrow(Icons.chevron_left_rounded, onPrev, 'Previous day'),
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: onPick,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.calendar_month_rounded, size: 18, color: color),
+                    const SizedBox(width: 8),
+                    Flexible(child: Text(label, overflow: TextOverflow.ellipsis, style: ui(14.5, weight: FontWeight.w600))),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          arrow(Icons.chevron_right_rounded, onNext, 'Next day'),
+        ],
       ),
     );
   }
