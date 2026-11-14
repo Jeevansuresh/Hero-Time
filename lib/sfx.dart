@@ -1,6 +1,8 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
+import 'music.dart';
+
 /// Sound effects bundled in assets/sfx.
 ///
 /// Each effect gets its own preloaded player in normal media-player mode. (Android's
@@ -42,6 +44,8 @@ class Sfx {
 
   static Future<void> play(String name) async {
     if (!enabled) return;
+    if (name == 'transform') Music.duck(const Duration(milliseconds: 3400));
+    if (name == 'initiate') Music.duck(const Duration(milliseconds: 1300));
     try {
       final p = await _player(name);
       await p.stop();

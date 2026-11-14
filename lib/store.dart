@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -17,6 +19,21 @@ class AppStore extends ChangeNotifier {
   static const _kEntries = 'entries_v1';
   static const _kSettings = 'settings_v1';
   static const _kHeroes = 'heroes_v1'; // custom heroes; photos under 'hero_img_<id>'
+  static const _kTracks = 'tracks_v1'; // lobby music library (files stay on the phone)
+
+  /// Lobby music tracks added from this phone. Not part of backups.
+  List<Track> tracks = [];
+
+  /// Bundled tracks first, then the ones added from this phone.
+  List<Track> get allTracks => [...builtInTracks, ...tracks];
+
+  /// The chosen lobby track; the classic instrumental until you pick another.
+  Track get selectedTrack {
+    for (final t in allTracks) {
+      if (t.id == settings.musicTrack) return t;
+    }
+    return builtInTracks.first;
+  }
 
   late SharedPreferences _prefs;
   List<Habit> habits = [];
@@ -52,6 +69,10 @@ class AppStore extends ChangeNotifier {
           Alien.fromJson(Map<String, dynamic>.from(x as Map),
               Alien.decodePhoto(_prefs.getString('hero_img_${x['id']}'))),
       ]);
+    }
+    final tj = _prefs.getString(_kTracks);
+    if (tj != null) {
+      tracks = [for (final x in jsonDecode(tj) as List) Track.fromJson(Map<String, dynamic>.from(x as Map))];
     }
     final s = _prefs.getString(_kSettings);
     if (s != null) settings = Settings.fromJson(Map<String, dynamic>.from(jsonDecode(s) as Map));
@@ -178,6 +199,33 @@ class AppStore extends ChangeNotifier {
     setCustomHeroes(list);
     await _prefs.setString(_kHeroes, jsonEncode(list.map((h) => h.toJson()).toList()));
     notifyListeners();
+  }
+
+  // ---------- lobby music library ----------
+
+  Future<void> saveTracks() async {
+    await _prefs.setString(_kTracks, jsonEncode(tracks.map((t) => t.toJson()).toList()));
+    notifyListeners();
+  }
+
+  Future<void> addTrack(Track t) async {
+    tracks.add(t);
+    await saveTracks();
+    updateSettings((x) => x.musicTrack = t.id); // a new track starts playing right away
+  }
+
+  Future<void> removeTrack(Track t) async {
+    tracks.removeWhere((x) => x.id == t.id);
+    await saveTracks();
+    if (!kIsWeb) {
+      try {
+        final f = File(t.path);
+        if (await f.exists()) await f.delete();
+      } catch (_) {}
+    }
+    if (settings.musicTrack == t.id) {
+      updateSettings((x) => x.musicTrack = null); // back to the default
+    }
   }
 
   // ---------- backup ----------

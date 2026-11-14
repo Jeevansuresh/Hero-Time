@@ -5,6 +5,7 @@ import '../notifications.dart';
 import '../sfx.dart';
 import '../store.dart';
 import '../theme.dart';
+import 'lobby_music_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -82,6 +83,12 @@ class SettingsScreen extends StatelessWidget {
                 s.updateSettings((x) => x.sound = v);
                 if (v) Sfx.play('check');
               },
+            ),
+            _Tile(
+              title: 'Lobby music',
+              subtitle: st.music ? s.selectedTrack.name : 'Off',
+              trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LobbyMusicScreen())),
             ),
             _Switch(
               title: 'Unlock everything',

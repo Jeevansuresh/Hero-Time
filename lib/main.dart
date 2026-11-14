@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'music.dart';
 import 'notifications.dart';
 import 'sfx.dart';
 import 'widgets/character.dart';
@@ -45,6 +46,9 @@ Future<void> main() async {
     });
   };
 
+  store.addListener(() => Music.sync(store));
+  Music.sync(store);
+
   runApp(StoreScope(store: store, child: const HeroTimeApp()));
 
   Reminders.reschedule(store);
@@ -75,6 +79,8 @@ class _HeroTimeAppState extends State<HeroTimeApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Coming back after midnight should roll "today" over and re-plan reminders.
     if (state == AppLifecycleState.resumed) StoreScope.read(context).refresh();
+    // Lobby music only plays while the app is on screen.
+    Music.setForeground(state == AppLifecycleState.resumed);
   }
 
   @override

@@ -143,6 +143,8 @@ class Settings {
   String petName = 'Ben';
   String alien = 'heatblast';
   bool sound = true;
+  bool music = true;
+  String? musicTrack; // id of the chosen lobby track (tracks live on the phone)
 
   Map<String, dynamic> toJson() => {
         'reminderOn': reminderOn,
@@ -153,6 +155,8 @@ class Settings {
         'petName': petName,
         'alien': alien,
         'sound': sound,
+        'music': music,
+        'musicTrack': musicTrack,
       };
 
   static Settings fromJson(Map<String, dynamic> j) => Settings()
@@ -163,8 +167,32 @@ class Settings {
     ..unlockAll = (j['unlockAll'] ?? false) as bool
     ..petName = ((j['petName'] ?? 'Ben') as String) == 'Ember' ? 'Ben' : (j['petName'] ?? 'Ben') as String
     ..alien = (j['alien'] ?? 'heatblast') as String
-    ..sound = (j['sound'] ?? true) as bool;
+    ..sound = (j['sound'] ?? true) as bool
+    ..music = (j['music'] ?? true) as bool
+    ..musicTrack = j['musicTrack'] as String?;
 }
+
+/// A lobby music track: either bundled with the app ([asset]) or added from the
+/// phone ([path], copied into the app's own storage and never uploaded).
+class Track {
+  Track({required this.id, required this.name, this.path = '', this.asset});
+  final String id;
+  String name;
+  final String path;
+  final String? asset; // e.g. 'music/classic_instrumental.ogg'
+
+  bool get builtIn => asset != null;
+
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'path': path};
+  static Track fromJson(Map<String, dynamic> j) =>
+      Track(id: j['id'] as String, name: (j['name'] ?? 'Track') as String, path: j['path'] as String);
+}
+
+/// Lobby tracks that ship with the app. The first one is the default.
+final builtInTracks = <Track>[
+  Track(id: 'builtin_classic', name: 'Classic Instrumental', asset: 'music/classic_instrumental.ogg'),
+  Track(id: 'builtin_tamil', name: 'Title Song (Tamil)', asset: 'music/title_song_tamil.ogg'),
+];
 
 List<Habit> defaultHabits() {
   final t = todayKey();
