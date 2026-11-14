@@ -24,8 +24,8 @@ class Sfx {
   /// Aliens with a voice line, played right after the transform theme (assets/sfx/voice_<id>.mp3).
   static const voiced = {'diamondhead', 'fourarms', 'swampfire', 'jetray', 'humungousaur', 'waybig', 'alienx'};
 
-  /// The transform theme runs this long before the alien's voice line comes in.
-  static const _themeLength = Duration(milliseconds: 3200);
+  /// The transform theme plays this long, then fades out as the alien's voice line comes in.
+  static const _themeLength = Duration(milliseconds: 1600);
   static Timer? _voice;
 
   static String _path(String name) =>
@@ -35,9 +35,26 @@ class Sfx {
   static void transformInto(String alienId) {
     _voice?.cancel(); // a quick re-transform drops the previous alien's line
     play('transform');
-    if (!voiced.contains(alienId)) return;
-    _player('voice_$alienId'); // load it while the theme plays
-    _voice = Timer(_themeLength, () => play('voice_$alienId'));
+    final speaks = voiced.contains(alienId);
+    if (speaks) _player('voice_$alienId'); // load it while the theme plays
+    _voice = Timer(_themeLength, () {
+      _fadeOut('transform');
+      if (speaks) play('voice_$alienId');
+    });
+  }
+
+  /// Quick fade so the cut-off theme doesn't click, then reset for next time.
+  static Future<void> _fadeOut(String name) async {
+    final p = _players[name];
+    if (p == null) return;
+    try {
+      for (final v in [0.6, 0.3, 0.1]) {
+        await p.setVolume(v);
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+      }
+      await p.stop();
+      await p.setVolume(1);
+    } catch (_) {}
   }
 
   static Future<AudioPlayer> _player(String name) async {
@@ -63,12 +80,13 @@ class Sfx {
 
   static Future<void> play(String name) async {
     if (!enabled) return;
-    if (name == 'transform') Music.duck(const Duration(milliseconds: 3400));
+    if (name == 'transform') Music.duck(const Duration(milliseconds: 1800));
     if (name == 'initiate') Music.duck(const Duration(milliseconds: 1300));
-    if (name.startsWith('voice_')) Music.duck(const Duration(milliseconds: 3300));
+    if (name.startsWith('voice_')) Music.duck(const Duration(milliseconds: 2400));
     try {
       final p = await _player(name);
       await p.stop();
+      await p.setVolume(1); // in case a fade-out was cut short
       await p.seek(Duration.zero);
       await p.resume();
     } catch (e) {
