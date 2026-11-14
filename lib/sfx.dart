@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
@@ -19,7 +21,24 @@ class Sfx {
   static final Map<String, AudioPlayer> _players = {};
   static final _context = AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers).build();
 
-  static String _path(String name) => _clips[name] ?? 'sfx/$name.wav';
+  /// Aliens with a voice line, played right after the transform theme (assets/sfx/voice_<id>.mp3).
+  static const voiced = {'diamondhead', 'fourarms', 'swampfire', 'jetray', 'humungousaur', 'waybig', 'alienx'};
+
+  /// The transform theme runs this long before the alien's voice line comes in.
+  static const _themeLength = Duration(milliseconds: 3200);
+  static Timer? _voice;
+
+  static String _path(String name) =>
+      _clips[name] ?? (name.startsWith('voice_') ? 'sfx/$name.mp3' : 'sfx/$name.wav');
+
+  /// Transform: the theme first, then the new alien's voice line (if it has one).
+  static void transformInto(String alienId) {
+    _voice?.cancel(); // a quick re-transform drops the previous alien's line
+    play('transform');
+    if (!voiced.contains(alienId)) return;
+    _player('voice_$alienId'); // load it while the theme plays
+    _voice = Timer(_themeLength, () => play('voice_$alienId'));
+  }
 
   static Future<AudioPlayer> _player(String name) async {
     final existing = _players[name];
@@ -46,6 +65,7 @@ class Sfx {
     if (!enabled) return;
     if (name == 'transform') Music.duck(const Duration(milliseconds: 3400));
     if (name == 'initiate') Music.duck(const Duration(milliseconds: 1300));
+    if (name.startsWith('voice_')) Music.duck(const Duration(milliseconds: 3300));
     try {
       final p = await _player(name);
       await p.stop();

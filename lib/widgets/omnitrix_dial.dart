@@ -151,7 +151,7 @@ class _OmnitrixDialState extends State<OmnitrixDial> with TickerProviderStateMix
       _close();
       return;
     }
-    Sfx.play('transform');
+    Sfx.transformInto(a.id);
     HapticFeedback.heavyImpact();
     _slam.forward(from: 0);
     _flash.forward(from: 0);
