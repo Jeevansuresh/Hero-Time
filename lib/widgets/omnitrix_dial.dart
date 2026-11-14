@@ -476,10 +476,10 @@ class _OmnitrixDialState extends State<OmnitrixDial> with TickerProviderStateMix
                   Padding(
                     padding: const EdgeInsets.all(3),
                     child: ok
-                        ? Image.asset(a.asset, fit: BoxFit.contain)
+                        ? Image(image: a.image, fit: BoxFit.contain)
                         : ColorFiltered(
                             colorFilter: const ColorFilter.mode(Color(0xFF050805), BlendMode.srcIn),
-                            child: Image.asset(a.asset, fit: BoxFit.contain),
+                            child: Image(image: a.image, fit: BoxFit.contain),
                           ),
                   ),
                   if (!ok)
@@ -653,7 +653,7 @@ class _Hologram extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final img = Image.asset(alien.asset, fit: BoxFit.contain);
+    final img = Image(image: alien.image, fit: BoxFit.contain);
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -670,19 +670,21 @@ class _Hologram extends StatelessWidget {
           animation: scan,
           builder: (context, child) {
             final phase = scan.value * 8;
+            final line = alien.custom ? .14 : .38;
             return ShaderMask(
               blendMode: BlendMode.dstOut,
               shaderCallback: (b) => dui.Gradient.linear(
                 Offset(0, phase),
                 Offset(0, phase + 4),
-                [Colors.black.withValues(alpha: .38), Colors.black.withValues(alpha: .38), Colors.transparent, Colors.transparent],
+                [Colors.black.withValues(alpha: line), Colors.black.withValues(alpha: line), Colors.transparent, Colors.transparent],
                 [0, .5, .5, 1],
                 TileMode.repeated,
               ),
               child: child,
             );
           },
-          child: ColorFiltered(colorFilter: _tint, child: img),
+          // Real people stay in true colour so you can recognise them; aliens go lime.
+          child: alien.custom ? img : ColorFiltered(colorFilter: _tint, child: img),
         ),
       ],
     );
@@ -696,7 +698,7 @@ class _Mystery extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final img = Image.asset(alien.asset, fit: BoxFit.contain);
+    final img = Image(image: alien.image, fit: BoxFit.contain);
     return Stack(
       fit: StackFit.expand,
       alignment: Alignment.center,

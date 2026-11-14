@@ -5,6 +5,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets/character.dart';
 import '../widgets/omnitrix_dial.dart';
+import 'hero_editor_screen.dart';
 
 class CharacterScreen extends StatelessWidget {
   const CharacterScreen({super.key});
@@ -23,7 +24,7 @@ class CharacterScreen extends StatelessWidget {
     // Unlocks grouped by level: aliens + mission slots + colours.
     final ms = <int, List<String>>{};
     void add(int l, String t) => (ms[l] ??= []).add(t);
-    for (final a in aliens.skip(1)) {
+    for (final a in builtInAliens.skip(1)) {
       add(a.level, 'alien:${a.name}');
     }
     for (final l in slotLevels) {
@@ -124,6 +125,14 @@ class CharacterScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+                  SectionLabel(
+                    'Your heroes',
+                    trailing: GestureDetector(
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HeroEditorScreen())),
+                      child: Text('+ ADD', style: heading(12, color: AppColors.green)),
+                    ),
+                  ),
+                  _HeroList(heroes: customHeroes, current: al),
                   const SectionLabel('Charging the Omnitrix'),
                   Panel(
                     child: Column(
@@ -231,4 +240,90 @@ class _Milestone extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// Custom heroes made on this phone. Always unlocked, and on the dial with the aliens.
+class _HeroList extends StatelessWidget {
+  const _HeroList({required this.heroes, required this.current});
+  final List<Alien> heroes;
+  final Alien current;
+
+  void _open(BuildContext context, [Alien? h]) =>
+      Navigator.push(context, MaterialPageRoute(builder: (_) => HeroEditorScreen(hero: h)));
+
+  @override
+  Widget build(BuildContext context) {
+    if (heroes.isEmpty) {
+      return Panel(
+        onTap: () => _open(context),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.green.withValues(alpha: 0.5), width: 1.5),
+              ),
+              child: const Icon(Icons.person_add_alt_1_rounded, color: AppColors.green),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Add yourself to the Omnitrix', style: ui(14.5, weight: FontWeight.w600)),
+                  const SizedBox(height: 3),
+                  Text('Your own photo as a free form. It stays on this phone.',
+                      style: ui(12, color: AppColors.muted, height: 1.35)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Panel(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        children: [
+          for (final h in heroes)
+            InkWell(
+              onTap: () => _open(context, h),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.cardHi,
+                        border: Border.all(color: h.color.withValues(alpha: 0.6), width: 1.5),
+                      ),
+                      child: ClipOval(child: Image(image: h.image, fit: BoxFit.contain)),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(h.name, style: ui(14.5, weight: FontWeight.w600)),
+                          const SizedBox(height: 2),
+                          Text(h == current ? '${h.species} · Active' : h.species,
+                              style: ui(12, color: h == current ? AppColors.green : AppColors.muted)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.edit_rounded, size: 16, color: AppColors.faint),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }

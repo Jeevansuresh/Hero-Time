@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,9 +11,10 @@ import '../store.dart';
 enum Mood { happy, neutral, sleepy }
 
 /// One DNA sample in the watch. Each unlocks at a level.
-/// Art is loaded from assets/aliens/<id>.png; until it exists a hologram stands in.
+/// Built-in art is loaded from assets/aliens/<id>.png. Custom heroes (added on the
+/// phone) carry their photo bytes instead; those live only on the device.
 class Alien {
-  const Alien(this.id, this.name, this.species, this.level, this.color, this.blurb);
+  const Alien(this.id, this.name, this.species, this.level, this.color, this.blurb, {this.photo});
   final String id;
   final String name;
   final String species;
@@ -19,11 +22,51 @@ class Alien {
   final Color color;
   final String blurb;
 
+  /// Photo of a custom hero (PNG/JPEG bytes). Null for built-in aliens.
+  final Uint8List? photo;
+
+  bool get custom => id.startsWith(customHeroPrefix);
   String get asset => 'assets/aliens/$id.png';
-  String get initials => name.replaceAll(RegExp(r'[^A-Za-z0-9 ]'), '').split(' ').map((w) => w[0]).take(2).join();
+  ImageProvider get image => photo != null ? MemoryImage(photo!) : AssetImage(asset);
+  String get initials {
+    final words = name.replaceAll(RegExp(r'[^A-Za-z0-9 ]'), '').split(' ').where((w) => w.isNotEmpty);
+    return words.isEmpty ? '?' : words.map((w) => w[0].toUpperCase()).take(2).join();
+  }
+
+  Alien copyWith({String? name, String? species, Color? color, String? blurb, Uint8List? photo}) => Alien(
+        id, name ?? this.name, species ?? this.species, level, color ?? this.color, blurb ?? this.blurb,
+        photo: photo ?? this.photo,
+      );
+
+  /// Custom-hero details for storage (the photo is stored separately).
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'species': species, 'color': color.toARGB32(), 'blurb': blurb};
+  static Alien fromJson(Map<String, dynamic> j, Uint8List? photo) => Alien(
+        j['id'] as String,
+        (j['name'] ?? 'Hero') as String,
+        (j['species'] ?? 'Human') as String,
+        1,
+        Color((j['color'] ?? 0xFFC0D72D) as int),
+        (j['blurb'] ?? '') as String,
+        photo: photo,
+      );
+
+  static Uint8List? decodePhoto(String? b64) => b64 == null ? null : base64Decode(b64);
+
+  @override
+  bool operator ==(Object other) => other is Alien && other.id == id;
+  @override
+  int get hashCode => id.hashCode;
 }
 
-const aliens = <Alien>[
+const customHeroPrefix = 'hero_';
+
+/// Every form in the watch: the built-in aliens, then your own heroes (always unlocked).
+/// The store refreshes this when heroes are added, edited or removed.
+List<Alien> aliens = [...builtInAliens];
+List<Alien> get customHeroes => aliens.where((a) => a.custom).toList();
+void setCustomHeroes(List<Alien> heroes) => aliens = [...builtInAliens, ...heroes];
+
+const builtInAliens = <Alien>[
   Alien('heatblast', 'Heatblast', 'Pyronite', 1, Color(0xFFFF7A1A), 'Turns up the heat on every habit.'),
   Alien('diamondhead', 'Diamondhead', 'Petrosapien', 2, Color(0xFF6FE3A8), 'Routines as hard as crystal.'),
   Alien('xlr8', 'XLR8', 'Kineceleran', 4, Color(0xFF3FB4FF), 'Fastest check-in in the galaxy.'),
@@ -46,7 +89,7 @@ Alien activeAlien(AppStore s, int level) {
 
 Alien? nextAlien(int level, bool unlockAll) {
   if (unlockAll) return null;
-  for (final a in aliens) {
+  for (final a in builtInAliens) {
     if (a.level > level) return a;
   }
   return null;
@@ -101,8 +144,8 @@ class _CharacterViewState extends State<CharacterView> with SingleTickerProvider
     final a = widget.alien;
     final size = widget.size;
     final fallback = _Hologram(alien: a, locked: widget.locked);
-    Widget art = Image.asset(
-      a.asset,
+    Widget art = Image(
+      image: a.image,
       fit: BoxFit.contain,
       filterQuality: FilterQuality.medium,
       errorBuilder: (_, __, ___) => fallback,

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'dart:typed_data';
+
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,12 +9,14 @@ import 'models.dart';
 import 'notifications.dart';
 import 'sfx.dart';
 import 'stats.dart';
+import 'widgets/character.dart';
 
 /// Single source of truth. Everything is persisted locally as JSON.
 class AppStore extends ChangeNotifier {
   static const _kHabits = 'habits_v1';
   static const _kEntries = 'entries_v1';
   static const _kSettings = 'settings_v1';
+  static const _kHeroes = 'heroes_v1'; // custom heroes; photos under 'hero_img_<id>'
 
   late SharedPreferences _prefs;
   List<Habit> habits = [];
@@ -40,6 +44,14 @@ class AppStore extends ChangeNotifier {
         final en = Entry.fromJson(Map<String, dynamic>.from(x as Map));
         _entries[_key(en.habitId, en.day)] = en;
       }
+    }
+    final hj = _prefs.getString(_kHeroes);
+    if (hj != null) {
+      setCustomHeroes([
+        for (final x in jsonDecode(hj) as List)
+          Alien.fromJson(Map<String, dynamic>.from(x as Map),
+              Alien.decodePhoto(_prefs.getString('hero_img_${x['id']}'))),
+      ]);
     }
     final s = _prefs.getString(_kSettings);
     if (s != null) settings = Settings.fromJson(Map<String, dynamic>.from(jsonDecode(s) as Map));
@@ -138,6 +150,34 @@ class AppStore extends ChangeNotifier {
   void refresh() {
     notifyListeners();
     Reminders.reschedule(this);
+  }
+
+  // ---------- custom heroes (stay on this phone, never in backups) ----------
+
+  /// Adds or updates a custom hero. Pass [photo] only when it changed.
+  Future<void> saveHero(Alien hero, {Uint8List? photo}) async {
+    if (photo != null) {
+      await _prefs.setString('hero_img_${hero.id}', base64Encode(photo));
+      hero = hero.copyWith(photo: photo);
+    }
+    final list = customHeroes;
+    final i = list.indexOf(hero);
+    i >= 0 ? list[i] = hero : list.add(hero);
+    await _writeHeroes(list);
+  }
+
+  Future<void> deleteHero(Alien hero) async {
+    await _prefs.remove('hero_img_${hero.id}');
+    await _writeHeroes(customHeroes..remove(hero));
+    if (settings.alien == hero.id) {
+      updateSettings((x) => x.alien = builtInAliens.first.id);
+    }
+  }
+
+  Future<void> _writeHeroes(List<Alien> list) async {
+    setCustomHeroes(list);
+    await _prefs.setString(_kHeroes, jsonEncode(list.map((h) => h.toJson()).toList()));
+    notifyListeners();
   }
 
   // ---------- backup ----------
