@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../coach.dart';
 import '../notifications.dart';
 import '../sfx.dart';
 import '../store.dart';
@@ -8,7 +9,10 @@ import '../theme.dart';
 import 'lobby_music_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.inTab = false});
+
+  /// Shown as a tab (no back arrow, room for the tab bar) rather than pushed.
+  final bool inTab;
 
   @override
   Widget build(BuildContext context) {
@@ -21,9 +25,11 @@ class SettingsScreen extends StatelessWidget {
       ..showSnackBar(SnackBar(content: Text(m)));
 
     return AppScaffold(
-      appBar: flatAppBar('Settings'),
+      appBar: inTab
+          ? flatAppBar('Settings', titleWidget: Text('SETTINGS', style: heading(18).copyWith(letterSpacing: 3)))
+          : flatAppBar('Settings'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 48),
+        padding: EdgeInsets.fromLTRB(20, 0, 20, inTab ? 110 : 48),
         children: [
           const SectionLabel('Reminder'),
           _Group(children: [
@@ -64,7 +70,19 @@ class SettingsScreen extends StatelessWidget {
                 await Reminders.showTest(st.petName);
               },
             ),
+            _Tile(
+              title: 'Test a reminder in 1 minute',
+              subtitle: 'Close the app and wait. If nothing arrives, your phone is blocking reminders',
+              trailing: const Icon(Icons.alarm_rounded, size: 20, color: AppColors.muted),
+              onTap: () async {
+                await Reminders.requestPermission();
+                final ok = await Reminders.testInOneMinute(st.petName);
+                toast(ok ? 'Scheduled. Close the app; it should arrive in about a minute.' : "Couldn't schedule it. Check notification permission.");
+              },
+            ),
           ]),
+          const SectionLabel('AI coach'),
+          const _Group(children: [_ApiKeyTile()]),
           const SectionLabel('Customise'),
           _Group(children: [
             _Tile(
@@ -235,4 +253,90 @@ class _Switch extends StatelessWidget {
       ),
     );
   }
+}
+
+
+/// Claude API key: entered here, stored encrypted on this phone, used by Insights.
+class _ApiKeyTile extends StatefulWidget {
+  const _ApiKeyTile();
+
+  @override
+  State<_ApiKeyTile> createState() => _ApiKeyTileState();
+}
+
+class _ApiKeyTileState extends State<_ApiKeyTile> {
+  String? _key;
+  bool _testing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Coach.apiKey().then((k) => mounted ? setState(() => _key = k) : null);
+  }
+
+  void _toast(String m) => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(m)));
+
+  Future<void> _edit() async {
+    final c = TextEditingController();
+    final res = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Claude API key', style: heading(19)),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Paste a key from console.anthropic.com. It stays encrypted on this phone and is only sent to Anthropic.',
+              style: ui(13, color: AppColors.muted, height: 1.4)),
+          const SizedBox(height: 14),
+          TextField(
+            controller: c,
+            autofocus: true,
+            obscureText: true,
+            enableSuggestions: false,
+            autocorrect: false,
+            style: ui(15),
+            decoration: fieldDeco(hint: 'sk-ant-...').copyWith(fillColor: AppColors.card),
+          ),
+        ]),
+        actions: [
+          if (_key != null)
+            TextButton(onPressed: () => Navigator.pop(ctx, ''), child: Text('Remove', style: ui(14, color: AppColors.danger))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: ui(14, color: AppColors.muted))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, c.text),
+              child: Text('Save', style: ui(14, weight: FontWeight.w700, color: AppColors.green))),
+        ],
+      ),
+    );
+    if (res == null) return;
+    if (res.trim().isEmpty) {
+      await Coach.setKey(null);
+      setState(() => _key = null);
+      _toast('API key removed');
+      return;
+    }
+    setState(() => _testing = true);
+    final err = await Coach.test(res.trim());
+    if (!mounted) return;
+    setState(() => _testing = false);
+    if (err != null) {
+      _toast(err);
+      return;
+    }
+    await Coach.setKey(res);
+    Sfx.play('goal');
+    setState(() => _key = res.trim());
+    _toast('Connected. Your coach is ready in Insights.');
+  }
+
+  @override
+  Widget build(BuildContext context) => _Tile(
+        title: 'Claude API key',
+        subtitle: _key == null ? 'Turns on the weekly debrief in Insights' : 'Stored encrypted on this phone · Claude Haiku',
+        trailing: _testing
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.green))
+            : Text(_key == null ? 'Add' : 'Connected',
+                style: ui(14, weight: FontWeight.w700, color: _key == null ? AppColors.muted : AppColors.green)),
+        onTap: _testing ? null : _edit,
+      );
 }

@@ -49,9 +49,13 @@ class Habit {
     required this.color,
     required this.tags,
     required this.createdDay,
+    this.why = '',
   });
 
   final String id;
+
+  /// "Why this matters to you", quoted back by the coach when this mission slips.
+  String why;
   String name;
   String emoji;
   HabitKind kind;
@@ -80,6 +84,7 @@ class Habit {
         'color': color,
         'tags': tags,
         'createdDay': createdDay,
+        'why': why,
       };
 
   factory Habit.fromJson(Map<String, dynamic> j) => Habit(
@@ -91,6 +96,7 @@ class Habit {
         color: (j['color'] as num?)?.toInt() ?? habitPalette[0],
         tags: ((j['tags'] as List?) ?? const []).map((e) => e.toString()).toList(),
         createdDay: (j['createdDay'] as num?)?.toInt() ?? todayKey(),
+        why: (j['why'] ?? '') as String,
       );
 
   Habit copy() => Habit.fromJson(toJson());

@@ -6,7 +6,7 @@ import 'notifications.dart';
 import 'sfx.dart';
 import 'widgets/character.dart';
 import 'screens/character_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/root_shell.dart';
 import 'store.dart';
 import 'theme.dart';
 
@@ -92,7 +92,7 @@ class _HeroTimeAppState extends State<HeroTimeApp> with WidgetsBindingObserver {
       navigatorKey: navigatorKey,
       routes: {'/companion': (_) => const CharacterScreen()},
       theme: buildTheme(),
-      home: const HomeScreen(),
+      home: const RootShell(),
     );
   }
 }

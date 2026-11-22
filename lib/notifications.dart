@@ -64,12 +64,34 @@ class Reminders {
     }
   }
 
-  /// Exact when the phone allows it (fires on the minute), otherwise inexact.
+  /// "Alarm clock" scheduling when the phone allows exact alarms: battery savers on
+  /// Xiaomi, Oppo, Realme, Vivo and Samsung phones leave these alone, unlike regular
+  /// exact alarms. (Android shows a small alarm icon in the status bar for the next one.)
   static Future<AndroidScheduleMode> _mode() async {
     try {
-      if (await _android?.canScheduleExactNotifications() ?? false) return AndroidScheduleMode.exactAllowWhileIdle;
+      if (await _android?.canScheduleExactNotifications() ?? false) return AndroidScheduleMode.alarmClock;
     } catch (_) {}
     return AndroidScheduleMode.inexactAllowWhileIdle;
+  }
+
+  /// Schedules a real reminder one minute from now, the same way daily ones are.
+  static Future<bool> testInOneMinute(String petName) async {
+    if (!_ready) return false;
+    try {
+      await _plugin.zonedSchedule(
+        2,
+        '⌚ Hero Time test reminder',
+        'Scheduled reminders work on this phone, $petName.',
+        tz.TZDateTime.from(DateTime.now().add(const Duration(minutes: 1)), tz.UTC),
+        _details,
+        androidScheduleMode: await _mode(),
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      );
+      return true;
+    } catch (e) {
+      debugPrint('Reminders.testInOneMinute failed: $e');
+      return false;
+    }
   }
 
   static Future<void> showTest(String petName) async {

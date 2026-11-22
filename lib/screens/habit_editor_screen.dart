@@ -33,6 +33,7 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
   late final TextEditingController _name = TextEditingController(text: _h.name);
   late final TextEditingController _emoji = TextEditingController(text: _h.emoji);
   final TextEditingController _tag = TextEditingController();
+  late final TextEditingController _why = TextEditingController(text: _h.why);
 
   bool get _isNew => widget.habit == null;
 
@@ -41,6 +42,7 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
     _name.dispose();
     _emoji.dispose();
     _tag.dispose();
+    _why.dispose();
     super.dispose();
   }
 
@@ -53,6 +55,7 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
     _h.name = name;
     final e = _emoji.text.trim();
     _h.emoji = e.isEmpty ? '✨' : e;
+    _h.why = _why.text.trim();
     _addTag(_tag.text);
     Sfx.play('pop');
     StoreScope.read(context).upsertHabit(_h);
@@ -254,6 +257,16 @@ class _HabitEditorScreenState extends State<HabitEditorScreen> {
               suffixIcon: IconButton(icon: const Icon(Icons.add_rounded), onPressed: () => _addTag(_tag.text)),
             ),
             onSubmitted: _addTag,
+          ),
+          SectionLabel('Why this matters', trailing: Text('the coach quotes it back', style: ui(11, color: AppColors.faint))),
+          TextField(
+            controller: _why,
+            style: ui(15, height: 1.4),
+            minLines: 2,
+            maxLines: 4,
+            maxLength: 140,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: fieldDeco(hint: "e.g. I want to keep the muscle I've built"),
           ),
           if (!_isNew) ...[
             const SizedBox(height: 36),

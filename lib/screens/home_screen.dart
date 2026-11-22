@@ -70,7 +70,7 @@ class HomeScreen extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 56),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 110),
           children: [
             // Brand bar
             Row(
