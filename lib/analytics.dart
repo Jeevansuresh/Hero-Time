@@ -8,6 +8,18 @@ import 'store.dart';
 
 const weekdayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
+/// Average that ignores missing values; null when there is nothing to average.
+double? avgOf(Iterable<double?> v) {
+  final x = v.whereType<double>().toList();
+  return x.isEmpty ? null : x.reduce((a, b) => a + b) / x.length;
+}
+
+/// The weeks with data, oldest → newest (missing weeks inside the range count as 0).
+List<double> trendOf(List<double?> v) {
+  final first = v.indexWhere((x) => x != null);
+  return first < 0 ? const [] : [for (final x in v.skip(first)) x ?? 0];
+}
+
 class MissionStats {
   MissionStats(this.h);
   final Habit h;
@@ -19,11 +31,15 @@ class MissionStats {
   int bestRun = 0; // longest run of consecutive ✓ days
   int thisWeek = 0, lastWeek = 0;
 
-  /// Done-rate per weekday (Mon..Sun) over the last 8 weeks; null where under 3 logged days.
+  /// Done-rate per weekday (Mon..Sun) over the last 8 weeks; null where nothing was logged.
   final List<double?> weekday = List.filled(7, null);
 
-  /// Share of the weekly goal hit, oldest → newest (12 weeks).
-  final List<double> weekly = [];
+  /// How many logged days each weekday rate is based on.
+  final List<int> weekdayN = List.filled(7, 0);
+
+  /// Share of the weekly goal hit, oldest → newest (12 weeks). Null for weeks before
+  /// you started this mission; partial weeks (the first one, this one) count fairly.
+  final List<double?> weekly = [];
 
   /// Misses with a note, newest first.
   final List<Entry> notes = [];
@@ -41,7 +57,7 @@ class MissionStats {
     int? best;
     for (var i = 0; i < 7; i++) {
       final v = weekday[i];
-      if (v == null) continue;
+      if (v == null || weekdayN[i] < 3) continue; // too little data to call it a pattern
       if (best == null || v < weekday[best]!) best = i;
     }
     return best;
@@ -133,11 +149,18 @@ class Analytics {
     }
     for (var w = 11; w >= 0; w--) {
       final s = ws - 7 * w;
-      var c = 0;
-      for (var i = 0; i < 7; i++) {
-        if (ok(h, s + i)) c++;
+      final from = math.max(s, start), to = math.min(s + 6, today);
+      if (to < from) {
+        m.weekly.add(null);
+        continue;
       }
-      m.weekly.add(s + 6 < start ? 0 : math.min(1.0, c / h.target));
+      var c = 0;
+      for (var d = from; d <= to; d++) {
+        if (ok(h, d)) c++;
+      }
+      // Fewer days available (first week, or this week so far) means a smaller target.
+      final tgt = math.max(1.0, h.target * (to - from + 1) / 7);
+      m.weekly.add(math.min(1.0, c / tgt));
     }
 
     final wdDone = List.filled(7, 0), wdN = List.filled(7, 0);
@@ -150,7 +173,8 @@ class Analytics {
       if (e.done) wdDone[wd]++;
     }
     for (var i = 0; i < 7; i++) {
-      if (wdN[i] >= 3) m.weekday[i] = wdDone[i] / wdN[i];
+      m.weekdayN[i] = wdN[i];
+      if (wdN[i] > 0) m.weekday[i] = wdDone[i] / wdN[i];
     }
 
     final entries = store.entriesFor(h.id).toList()..sort((a, b) => b.day.compareTo(a.day));
@@ -211,10 +235,10 @@ class Analytics {
   }
 
   /// Share of weekly goals hit across all missions, oldest → newest (12 weeks).
-  List<double> get overallWeekly {
-    if (missions.isEmpty) return List.filled(12, 0);
-    return [for (var i = 0; i < 12; i++) missions.map((m) => m.weekly[i]).reduce((a, b) => a + b) / missions.length];
-  }
+  /// Null for weeks before any mission started.
+  List<double?> get overallWeekly => [
+        for (var i = 0; i < 12; i++) avgOf([for (final m in missions) m.weekly[i]])
+      ];
 
   ({int done, int missed}) counts(int days) {
     var done = 0, missed = 0;
@@ -226,6 +250,22 @@ class Analytics {
       }
     }
     return (done: done, missed: missed);
+  }
+
+  /// Check-in consistency: days where every mission that existed was logged (✓ or ✕).
+  /// Today only counts once it's fully logged, since the day isn't over.
+  ({int logged, int total}) checkInDays(int days) {
+    var n = 0, total = 0;
+    for (var a = 0; a < days; a++) {
+      final d = today - a;
+      final active = store.habits.where((h) => _start(h) <= d).toList();
+      if (active.isEmpty) continue;
+      final all = active.every((h) => logged(h, d));
+      if (a == 0 && !all) continue;
+      total++;
+      if (all) n++;
+    }
+    return (logged: n, total: total);
   }
 
   MissionStats? get biggestRisk {

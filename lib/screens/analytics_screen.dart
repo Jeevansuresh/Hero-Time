@@ -19,20 +19,18 @@ class AnalyticsScreen extends StatefulWidget {
 class _AnalyticsScreenState extends State<AnalyticsScreen> {
   int _weeks = 4;
 
-  double _avg(Iterable<double> v) => v.isEmpty ? 0 : v.reduce((a, b) => a + b) / v.length;
-
   @override
   Widget build(BuildContext context) {
     final s = StoreScope.of(context);
     final a = Analytics(s);
     final w = _weeks;
     final overall = a.overallWeekly;
-    final cur = _avg(overall.skip(12 - w));
-    final prevList = overall.sublist(math.max(0, 12 - 2 * w), 12 - w);
-    final prev = prevList.isEmpty ? cur : _avg(prevList);
-    final delta = ((cur - prev) * 100).round();
+    final cur = avgOf(overall.skip(12 - w)) ?? 0;
+    final prev = avgOf(overall.sublist(math.max(0, 12 - 2 * w), 12 - w));
+    final delta = prev == null ? null : ((cur - prev) * 100).round();
+    final trend = trendOf(overall);
     final c = a.counts(w * 7);
-    final best = a.missions.isEmpty ? null : (a.missions.toList()..sort((x, y) => y.bestRun.compareTo(x.bestRun))).first;
+    final ci = a.checkInDays(w * 7);
     final tagged = a.missions.where((m) => m.tags.isNotEmpty && m.tags.values.any((n) => n > 0)).toList();
 
     return AppScaffold(
@@ -73,28 +71,34 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                             const SizedBox(height: 6),
                             Text('${(cur * 100).round()}%', style: heading(30)),
                             const SizedBox(height: 6),
-                            Text.rich(TextSpan(children: [
-                              TextSpan(
-                                  text: '${delta >= 0 ? '▲' : '▼'} ${delta.abs()} pts ',
-                                  style: ui(12.5, weight: FontWeight.w700, color: delta >= 0 ? AppColors.green : AppColors.danger)),
-                              TextSpan(text: 'vs previous $w weeks', style: ui(12.5, color: AppColors.muted)),
-                            ])),
+                            delta == null
+                                ? Text('Comparison starts after $w weeks of logging', style: ui(12.5, color: AppColors.muted))
+                                : Text.rich(TextSpan(children: [
+                                    TextSpan(
+                                        text: '${delta >= 0 ? '▲' : '▼'} ${delta.abs()} pts ',
+                                        style: ui(12.5, weight: FontWeight.w700, color: delta >= 0 ? AppColors.green : AppColors.danger)),
+                                    TextSpan(text: 'vs previous $w weeks', style: ui(12.5, color: AppColors.muted)),
+                                  ])),
                           ]),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    AreaChart(values: overall.sublist(12 - math.max(w, 6)), color: AppColors.green),
+                    _Trend(values: trend.sublist(math.max(0, trend.length - math.max(w, 6))), color: AppColors.green),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
               Row(children: [
-                _Stat(label: 'Check-ins', value: '${c.done}', sub: c.done + c.missed == 0 ? '—' : '${(c.done / (c.done + c.missed) * 100).round()}% hit rate'),
+                _Stat(
+                    label: 'Days logged',
+                    value: '${ci.logged}/${ci.total}',
+                    sub: ci.logged == ci.total ? 'never skipped' : 'every mission logged',
+                    color: ci.total > 0 && ci.logged == ci.total ? AppColors.green : null),
                 const SizedBox(width: 10),
-                _Stat(label: 'Missed', value: '${c.missed}', sub: '${(c.missed / w).toStringAsFixed(1)} a week'),
+                _Stat(label: 'Done ✓', value: '${c.done}', sub: c.done + c.missed == 0 ? '—' : '${(c.done / (c.done + c.missed) * 100).round()}% of logs'),
                 const SizedBox(width: 10),
-                _Stat(label: 'Best run', value: '${best?.bestRun ?? 0}d', sub: best?.h.name ?? '—'),
+                _Stat(label: 'Not done ✕', value: '${c.missed}', sub: 'you marked ✕'),
               ]),
               SectionLabel('Missions', trailing: Text('last $w weeks', style: ui(11, color: AppColors.faint))),
               Panel(
@@ -162,7 +166,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
                   color: (m.sinceLast ?? 0) >= 5 ? AppColors.danger : null),
             ]),
             SectionLabel('12-week trend', trailing: Text('% of weekly goal', style: ui(11, color: AppColors.faint))),
-            Panel(child: AreaChart(values: m.weekly, color: color)),
+            Panel(child: _Trend(values: trendOf(m.weekly), color: color)),
             SectionLabel('By weekday', trailing: Text('% done · 8 weeks', style: ui(11, color: AppColors.faint))),
             Panel(child: _WeekdayBars(m: m, color: color)),
             if (m.notes.isNotEmpty) ...[
@@ -254,10 +258,10 @@ class _MissionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = Color(m.h.color);
-    double avg(Iterable<double> v) => v.isEmpty ? 0 : v.reduce((a, b) => a + b) / v.length;
-    final cur = avg(m.weekly.skip(12 - weeks));
-    final prevL = m.weekly.sublist(math.max(0, 12 - 2 * weeks), 12 - weeks);
-    final d = ((cur - (prevL.isEmpty ? cur : avg(prevL))) * 100).round();
+    final cur = avgOf(m.weekly.skip(12 - weeks)) ?? 0;
+    final prev = avgOf(m.weekly.sublist(math.max(0, 12 - 2 * weeks), 12 - weeks));
+    final d = prev == null ? null : ((cur - prev) * 100).round();
+    final spark = trendOf(m.weekly);
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -278,15 +282,15 @@ class _MissionRow extends StatelessWidget {
               Text('${_r1(m.recent)}/wk · goal ${m.h.target}', style: ui(12, color: AppColors.muted)),
             ]),
           ),
-          Sparkline(values: m.weekly.sublist(12 - math.max(weeks, 6)), color: color),
+          if (spark.length >= 2) Sparkline(values: spark.sublist(math.max(0, spark.length - math.max(weeks, 6))), color: color),
           const SizedBox(width: 12),
           SizedBox(
             width: 52,
             child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Text('${(cur * 100).round()}%', style: heading(15)),
               const SizedBox(height: 2),
-              Text('${d >= 0 ? '▲' : '▼'} ${d.abs()}',
-                  style: ui(11.5, weight: FontWeight.w700, color: d >= 0 ? AppColors.green : AppColors.danger)),
+              Text(d == null ? 'new' : '${d >= 0 ? '▲' : '▼'} ${d.abs()}',
+                  style: ui(11.5, weight: FontWeight.w700, color: d == null ? AppColors.faint : d >= 0 ? AppColors.green : AppColors.danger)),
             ]),
           ),
         ]),
@@ -332,7 +336,8 @@ class _Heat extends StatelessWidget {
                     borderRadius: BorderRadius.circular(7),
                     color: m.weekday[i] == null
                         ? AppColors.empty.withValues(alpha: .5)
-                        : Color.lerp(AppColors.empty, Color(m.h.color), .12 + m.weekday[i]! * .76),
+                        : Color.lerp(AppColors.empty, Color(m.h.color), .12 + m.weekday[i]! * .76)!
+                            .withValues(alpha: m.weekdayN[i] < 3 ? .45 : 1),
                   ),
                   child: Text(m.weekday[i] == null ? '' : '${(m.weekday[i]! * 100).round()}',
                       style: ui(10.5,
@@ -342,6 +347,10 @@ class _Heat extends StatelessWidget {
               ),
           ]),
         ),
+      if (missions.any((m) => m.weekdayN.any((n) => n > 0 && n < 3))) ...[
+        const SizedBox(height: 6),
+        Text('Faded squares are based on fewer than 3 days. They firm up as you log.', style: ui(11.5, color: AppColors.faint)),
+      ],
       if (worstM != null) ...[
         const SizedBox(height: 8),
         Text.rich(TextSpan(style: ui(12.5, color: AppColors.muted), children: [
@@ -432,4 +441,19 @@ class _WeekdayBars extends StatelessWidget {
             ),
         ]),
       );
+}
+
+/// Trend chart, or a note until there are two weeks to draw.
+class _Trend extends StatelessWidget {
+  const _Trend({required this.values, required this.color});
+  final List<double> values;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => values.length >= 2
+      ? AreaChart(values: values, color: color)
+      : SizedBox(
+          height: 70,
+          child: Center(child: Text('Your trend line appears after your second week.', style: ui(12.5, color: AppColors.muted))),
+        );
 }
