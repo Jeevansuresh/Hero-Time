@@ -61,7 +61,7 @@ class AreaChart extends StatelessWidget {
           if (labels) ...[
             const SizedBox(height: 6),
             Row(children: [
-              Text('${values.length - 1} wks ago', style: ui(10, color: AppColors.faint)),
+              Text(values.length == 2 ? 'Last week' : '${values.length - 1} wks ago', style: ui(10, color: AppColors.faint)),
               const Spacer(),
               Text('This week', style: ui(10, color: AppColors.faint)),
             ]),

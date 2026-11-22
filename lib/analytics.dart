@@ -252,6 +252,23 @@ class Analytics {
     return (done: done, missed: missed);
   }
 
+  /// The mission with the most ✕ marks in the last [days], and how many.
+  ({Habit? habit, int count}) mostMissed(int days) {
+    Habit? top;
+    var best = 0;
+    for (final h in store.habits) {
+      var n = 0;
+      for (var a = 0; a < days; a++) {
+        if (store.entry(h.id, today - a)?.done == false) n++;
+      }
+      if (n > best) {
+        best = n;
+        top = h;
+      }
+    }
+    return (habit: top, count: best);
+  }
+
   /// Check-in consistency: days where every mission that existed was logged (✓ or ✕).
   /// Today only counts once it's fully logged, since the day isn't over.
   ({int logged, int total}) checkInDays(int days) {

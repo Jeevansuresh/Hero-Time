@@ -31,6 +31,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
     final trend = trendOf(overall);
     final c = a.counts(w * 7);
     final ci = a.checkInDays(w * 7);
+    final top = a.mostMissed(w * 7);
     final tagged = a.missions.where((m) => m.tags.isNotEmpty && m.tags.values.any((n) => n > 0)).toList();
 
     return AppScaffold(
@@ -91,14 +92,17 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
               const SizedBox(height: 12),
               Row(children: [
                 _Stat(
-                    label: 'Days logged',
+                    label: 'Logged',
                     value: '${ci.logged}/${ci.total}',
-                    sub: ci.logged == ci.total ? 'never skipped' : 'every mission logged',
+                    sub: ci.logged == ci.total ? 'no gaps' : 'days',
                     color: ci.total > 0 && ci.logged == ci.total ? AppColors.green : null),
                 const SizedBox(width: 10),
-                _Stat(label: 'Done ✓', value: '${c.done}', sub: c.done + c.missed == 0 ? '—' : '${(c.done / (c.done + c.missed) * 100).round()}% of logs'),
+                _Stat(label: 'Done', value: '${c.done}', sub: c.done + c.missed == 0 ? '—' : '${(c.done / (c.done + c.missed) * 100).round()}% of logs'),
                 const SizedBox(width: 10),
-                _Stat(label: 'Not done ✕', value: '${c.missed}', sub: 'you marked ✕'),
+                _Stat(
+                    label: '✕ marks',
+                    value: '${c.missed}',
+                    sub: top.habit == null ? 'none' : '${top.habit!.name} ${top.count}'),
               ]),
               SectionLabel('Missions', trailing: Text('last $w weeks', style: ui(11, color: AppColors.faint))),
               Panel(
